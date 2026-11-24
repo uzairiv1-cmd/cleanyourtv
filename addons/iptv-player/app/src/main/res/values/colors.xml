@@ -1,10 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#FF0D1117</color>
-    <color name="panel">#FF161B22</color>
-    <color name="accent">#FF2EC4B6</color>
-    <color name="text">#FFE6EDF3</color>
-    <color name="text_dim">#FF8B949E</color>
-    <color name="focus_fill">#FF23303D</color>
-    <color name="selected_fill">#FF1B2A2E</color>
+    <!-- AV palette: black with the logo's orange. -->
+    <color name="bg">#FF050505</color>
+    <color name="bg_2">#FF0B0B0B</color>
+    <color name="orange">#FFFE5D09</color>
+    <color name="orange_light">#FFFF7A2E</color>
+    <color name="orange_deep">#FFE04E00</color>
+    <color name="orange_10">#1AFE5D09</color>
+    <color name="orange_20">#33FE5D09</color>
+    <color name="grey_v">#FF8A8A8A</color>
+    <color name="text">#FFEEF0F4</color>
+    <color name="text_dim">#FF9AA0AA</color>
+    <color name="glass">#0FFFFFFF</color>
+    <color name="glass_strong">#1AFFFFFF</color>
+    <color name="edge">#1FFFFFFF</color>
+    <color name="scrim">#D9050505</color>
+    <color name="live_red">#FFFF4D4D</color>
+    <!-- Kept for the playlist screens. -->
+    <color name="panel">#FF121212</color>
+    <color name="accent">#FFFE5D09</color>
+    <color name="focus_fill">#1AFE5D09</color>
+    <color name="selected_fill">#FF1C1C1C</color>
 </resources>

@@ -19,6 +19,9 @@ interface Source {
     suspend fun items(section: Section, category: Category): List<Item>
     suspend fun episodes(series: Item): List<Item>
 
+    /** Everything in a section, for search. */
+    suspend fun all(section: Section): List<Item> = items(section, Category(Category.ALL, ""))
+
     companion object {
         fun create(p: Playlist): Source = when (p.type) {
             SourceType.XTREAM -> XtreamSource(XtreamApi(p.server, p.username, p.password))
@@ -95,8 +98,10 @@ class XtreamSource(private val api: XtreamApi) : Source {
         }
         if (section == Section.LIVE) liveExt() // checks the login once, with a clear message
         val text = get(api.api(action))
-        val cats = withContext(Dispatchers.Default) { XtreamParser.categories(text) }
-        if (cats.isEmpty() && text.trim().let { it.isEmpty() || it.startsWith("<") }) {
+        val parsed = withContext(Dispatchers.Default) { XtreamParser.categories(text) }
+        // Every channel in one list, for browsing and searching them all.
+        val cats = if (section == Section.LIVE && parsed.isNotEmpty()) listOf(Category(Category.ALL, "All channels")) + parsed else parsed
+        if (parsed.isEmpty() && text.trim().let { it.isEmpty() || it.startsWith("<") }) {
             throw Http.HttpError("The server did not answer like an Xtream Codes panel")
         }
         cats

@@ -3,6 +3,7 @@
     <style name="Theme.Iptv" parent="@android:style/Theme.DeviceDefault.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
         <item name="android:colorAccent">@color/accent</item>
+        <item name="android:fontFamily">sans-serif</item>
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowFullscreen">true</item>
     </style>
@@ -41,5 +42,74 @@
         <item name="android:layout_marginBottom">6dp</item>
         <item name="android:textColor">@color/text_dim</item>
         <item name="android:textSize">15sp</item>
+    </style>
+    <style name="RailItem">
+        <item name="android:layout_width">38dp</item>
+        <item name="android:layout_height">38dp</item>
+        <item name="android:layout_marginBottom">12dp</item>
+        <item name="android:padding">9dp</item>
+        <item name="android:background">@drawable/bg_rail_item</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+    </style>
+    <style name="Cap">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:letterSpacing">0.28</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:textColor">@color/orange_light</item>
+        <item name="android:textSize">7.5sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="PageTitle">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:textSize">26sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:letterSpacing">-0.01</item>
+    </style>
+    <style name="Row">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">10dp</item>
+        <item name="android:clipChildren">false</item>
+        <item name="android:clipToPadding">false</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:scrollbars">none</item>
+    </style>
+    <style name="ButtonOrange">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_button</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+        <item name="android:paddingStart">15dp</item>
+        <item name="android:paddingEnd">15dp</item>
+        <item name="android:paddingTop">7dp</item>
+        <item name="android:paddingBottom">7dp</item>
+        <item name="android:textColor">#FF111111</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+    <style name="ButtonGlass" parent="ButtonOrange">
+        <item name="android:background">@drawable/bg_button_glass</item>
+        <item name="android:textColor">@color/text</item>
+        <item name="android:textStyle">normal</item>
+    </style>
+    <style name="RoundIcon">
+        <item name="android:layout_width">34dp</item>
+        <item name="android:layout_height">34dp</item>
+        <item name="android:padding">9dp</item>
+        <item name="android:background">@drawable/bg_circle</item>
+        <item name="android:focusable">true</item>
+        <item name="android:clickable">true</item>
+    </style>
+    <style name="PlayerSmall">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textColor">#FFDDDDDD</item>
+        <item name="android:textSize">11sp</item>
     </style>
 </resources>

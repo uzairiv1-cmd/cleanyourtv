@@ -2,6 +2,7 @@ package app.iptvplayer.tv.ui
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import android.util.LruCache
@@ -25,15 +26,15 @@ object ImageLoader {
     private val pool = Executors.newFixedThreadPool(4)
     private val main = Handler(Looper.getMainLooper())
 
-    fun load(view: ImageView, url: String?, placeholder: Int, targetPx: Int) {
+    fun load(view: ImageView, url: String?, placeholder: Drawable?, targetPx: Int) {
         if (url.isNullOrBlank() || !(url.startsWith("http://") || url.startsWith("https://")) || url in failed) {
             wanted.remove(view)
-            view.setImageResource(placeholder)
+            view.setImageDrawable(placeholder)
             return
         }
         cache.get(url)?.let { wanted.remove(view); view.setImageBitmap(it); return }
         wanted[view] = url
-        view.setImageResource(placeholder)
+        view.setImageDrawable(placeholder)
         pool.execute {
             if (wanted[view] != url) return@execute
             val bmp = try { decode(Http.bytes(url, 4 * 1024 * 1024), targetPx) } catch (e: Exception) { null }

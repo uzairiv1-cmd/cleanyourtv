@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="6dp"
+    android:layout_marginTop="3dp"
+    android:layout_marginEnd="6dp"
+    android:layout_marginBottom="3dp"
+    android:background="@drawable/bg_card"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="10dp"
+    android:paddingTop="7dp"
+    android:paddingEnd="10dp"
+    android:paddingBottom="7dp">
+
+    <TextView
+        android:id="@+id/number"
+        android:layout_width="28dp"
+        android:layout_height="wrap_content"
+        android:gravity="end"
+        android:textColor="@color/text_dim"
+        android:textSize="10sp"
+        android:textStyle="bold" />
+
+    <ImageView
+        android:id="@+id/image"
+        android:layout_width="48dp"
+        android:layout_height="31dp"
+        android:layout_marginStart="11dp"
+        android:background="@drawable/round_clip"
+        android:importantForAccessibility="no"
+        android:scaleType="fitCenter" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:singleLine="true"
+            android:textColor="@color/text"
+            android:textSize="12sp" />
+
+        <TextView
+            android:id="@+id/info"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:textColor="@color/text_dim"
+            android:textSize="9sp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/star"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:layout_marginEnd="10dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_star" />
+
+    <ImageView
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:background="@drawable/oval_clip"
+        android:importantForAccessibility="no"
+        android:padding="6dp"
+        android:src="@drawable/ic_play"
+        android:tint="@color/orange_light" />
+</LinearLayout>

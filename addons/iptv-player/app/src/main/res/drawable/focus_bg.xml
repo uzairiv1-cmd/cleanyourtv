@@ -4,19 +4,19 @@
         <shape>
             <solid android:color="@color/focus_fill" />
             <stroke android:width="2dp" android:color="@color/accent" />
-            <corners android:radius="8dp" />
+            <corners android:radius="10dp" />
         </shape>
     </item>
     <item android:state_activated="true">
         <shape>
             <solid android:color="@color/selected_fill" />
-            <corners android:radius="8dp" />
+            <corners android:radius="10dp" />
         </shape>
     </item>
     <item>
         <shape>
             <solid android:color="@android:color/transparent" />
-            <corners android:radius="8dp" />
+            <corners android:radius="10dp" />
         </shape>
     </item>
 </selector>

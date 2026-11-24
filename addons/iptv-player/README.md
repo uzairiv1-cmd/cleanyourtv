@@ -1,8 +1,8 @@
 # IPTV Player
 
 An IPTV player for Android TV, Google TV and Fire TV that opens an **Xtream Codes** account or an
-**M3U / M3U8 link**. It is built for the remote: Live TV, Movies and Series tabs, categories on the
-left, channels or posters on the right, and a Media3 player.
+**M3U / M3U8 link**. It is built for the remote and drawn in black and orange with the AV mark: a side menu
+(Home, Live TV, Movies, Series, Search, Settings), large focus highlights, and a Media3 player.
 
 It is a CleanYourTV add-on: a normal app that works with any launcher. It also has a module card, so on
 CleanYourTV it can sit in the dock as **IPTV Player · Xtream and M3U** once you approve it.
@@ -14,25 +14,29 @@ with no channels and only plays the playlists you add. Use only services you are
 
 | | |
 | :- | :- |
-| Xtream Codes | Log in with server, username and password. The login is checked before saving, and the account's expiry date is shown. Live TV, Movies (VOD) and Series with seasons and episodes. Each category is loaded when you open it, so large accounts open quickly. Live streams use HLS (`.m3u8`) when the account allows it, and MPEG-TS otherwise |
-| M3U / M3U8 links | `#EXTINF` with `tvg-name`, `tvg-logo`, `group-title`, plus `#EXTGRP`. The playlist is read line by line, so big lists don't run the TV out of memory. Entries are sorted into Live TV, Movies and Series by their `/movie/` or `/series/` path or their file extension |
-| Xtream link pasted as M3U | A `…/get.php?username=…&password=…` link is recognised and saved as an Xtream account, which adds Movies and Series |
-| Several playlists | Add, edit, delete and switch between them under **Playlists** |
-| Favourites | Long-press OK on a channel, movie or series to add it or remove it. Each playlist has its own **★ Favourites** list |
-| Filter | Type in the filter box to narrow the category you have open |
-| Player | Media3 (ExoPlayer): HLS and progressive streams (MPEG-TS, MP4, MKV), audio and subtitle tracks from the controls. On live TV, Up/Down and Channel +/- change channel while the controls are hidden, Info shows the channel name, and a stream that drops is reconnected. Movies and episodes start again where you left them |
+| Home | A greeting, **Continue watching** with a Resume button and progress, doors to Live TV, Movies and Series, your favourite channels as round logos, recently watched, and favourite movies and series |
+| Live TV | Categories on the left (with **All channels** for Xtream), numbered channels in the middle, and on the right a muted **live preview** of the focused channel with Watch and Favourite. The preview can be turned off in Settings |
+| Movies and Series | Category chips and a poster wall with rating and progress. A series opens its episodes |
+| Search | One search over every channel, movie and series of the playlist |
+| Player | Media3 (ExoPlayer): HLS and progressive streams (MPEG-TS, MP4, MKV). Live: **Up/Down or Channel +/- change channel** with a channel banner, **Right** opens the channel list, Left returns to the previous channel, number keys jump to a channel. Movies and episodes: Left/Right jump 10 seconds and they resume where you stopped. OK shows the controls: audio, subtitles, picture fit and speed. A stream that drops is reconnected |
+| Xtream Codes | Log in with server, username and password, checked before saving. Live TV, Movies and Series, each category loaded when you open it |
+| M3U / M3U8 links | `#EXTINF` with `tvg-name`, `tvg-logo`, `group-title`, plus `#EXTGRP`, read line by line. A `…/get.php?username=…&password=…` link is saved as an Xtream account |
+| Favourites | Hold OK on a channel, movie or series. Each playlist has its own |
+| Settings | Playlists, live preview, resume, and clearing the watch history |
 
-Not done yet: an EPG/TV guide, catch-up, recording, a search across every category at once, parental PINs,
-DASH/RTMP/UDP streams, and DRM.
+Not done yet: an EPG/TV guide, catch-up, recording, parental PINs, DASH/RTMP/UDP streams, and DRM.
 
 ## Test it on your TV
 
 You need the APK file and a way to get it onto the TV. Either way works on any Android TV, Google TV
 or Fire TV running Android 8 or newer.
 
+**The APK:** build it (below), or use a ready-made `IPTV-Player-<version>.apk` you were given. It is signed with
+your own upload key, so later versions signed with the same key install over it and keep your playlists.
+
 **Without a computer: a USB stick or "Send files to TV"**
 
-1. Copy `app-debug.apk` to a USB stick, or send it with the free *Send files to TV* app (on the phone and on
+1. Copy the APK to a USB stick, or send it with the free *Send files to TV* app (on the phone and on
    the TV).
 2. On the TV, install a file manager from the Play Store (for example *File Commander*, or *Downloader* on Fire TV).
 3. Allow that app to install apps: **Settings → Apps → Security & restrictions → Unknown sources**. On Google TV:
@@ -50,7 +54,7 @@ or Fire TV running Android 8 or newer.
 
    ```bash
    adb connect <tv ip>:5555          # accept the prompt on the TV
-   adb install -r app-debug.apk
+   adb install -r IPTV-Player-1.0.0.apk
    ```
 
 4. When you have finished testing, switch **USB debugging** and **Network debugging** off again: while they are on,
