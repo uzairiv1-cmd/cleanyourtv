@@ -199,7 +199,7 @@ class LivePage(host: MainActivity) : Page(host, R.layout.page_live) {
 
     private fun startPreview(item: Item) {
         val media = Players.mediaItem(item) ?: return
-        val p = preview ?: Players.create(host).also {
+        val p = preview ?: Players.create(host, preview = true).also {
             it.volume = 0f
             it.addListener(object : Player.Listener {
                 override fun onRenderedFirstFrame() { previewView.visibility = View.VISIBLE }

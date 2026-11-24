@@ -6,6 +6,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
+import android.net.ConnectivityManager
+import android.net.Network
 import android.view.KeyEvent
 import android.view.View
 import android.widget.ImageView
@@ -65,7 +68,28 @@ class PlayerActivity : Activity() {
             handler.postDelayed(this, 500)
         }
     }
-    private var retries = 0
+    private val detector = StallDetector()
+    private var attempts = 0
+    private var reconnectPending = false
+    private var playingSince = 0L
+    /** The address being played: the channel's own, or its other format after repeated failures. */
+    private var currentUrl: String? = null
+    private val reconnectNow = Runnable { reopen() }
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private lateinit var reconnectPill: TextView
+
+    /** Once a second: notices a frozen or endlessly buffering stream, and forgets old failures after 30 s of playing. */
+    private val watch = object : Runnable {
+        override fun run() {
+            val p = player
+            if (p != null && !reconnectPending && error.visibility != View.VISIBLE) {
+                val now = SystemClock.elapsedRealtime()
+                if (attempts > 0 && p.isPlaying && now - playingSince > 30_000) attempts = 0
+                if (detector.check(now, p.playWhenReady, p.playbackState, p.currentPosition)) scheduleReconnect(immediate = true)
+            }
+            handler.postDelayed(this, 1000)
+        }
+    }
     private var resumeUrl: String? = null
     private var lastChannel = -1
     private var typed = ""
@@ -105,6 +129,7 @@ class PlayerActivity : Activity() {
         buffering = findViewById(R.id.buffering)
         playButton = findViewById(R.id.btn_play)
         seek = findViewById(R.id.seek)
+        reconnectPill = findViewById(R.id.reconnect)
         view.keepScreenOn = true
         drawerList.layoutManager = LinearLayoutManager(this)
         drawerList.adapter = drawerAdapter
@@ -138,6 +163,30 @@ class PlayerActivity : Activity() {
         }
         play(PlayQueue.current ?: return)
         handler.post(tick)
+        handler.post(watch)
+        watchNetwork()
+    }
+
+    /** When the network comes back after a drop, reconnect at once instead of waiting for the next try. */
+    private fun watchNetwork() {
+        val cm = getSystemService(ConnectivityManager::class.java) ?: return
+        val cb = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                handler.post {
+                    if (reconnectPending || error.visibility == View.VISIBLE) {
+                        handler.removeCallbacks(reconnectNow)
+                        error.visibility = View.GONE
+                        reopen()
+                    }
+                }
+            }
+        }
+        try {
+            cm.registerDefaultNetworkCallback(cb)
+            networkCallback = cb
+        } catch (e: RuntimeException) {
+            // Some TVs limit network callbacks; the timed retries still run.
+        }
     }
 
     override fun onStop() {
@@ -147,22 +196,28 @@ class PlayerActivity : Activity() {
         player = null
         view.player = null
         handler.removeCallbacksAndMessages(null)
+        reconnectPending = false
+        networkCallback?.let { cb ->
+            try { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(cb) } catch (e: RuntimeException) { /* already gone */ }
+        }
+        networkCallback = null
         super.onStop()
     }
 
     private val listener = object : Player.Listener {
         override fun onPlaybackStateChanged(state: Int) {
             buffering.visibility = if (state == Player.STATE_BUFFERING) View.VISIBLE else View.GONE
-            if (state == Player.STATE_READY) {
-                retries = 0
-                error.visibility = View.GONE
-            }
+            if (state == Player.STATE_READY) error.visibility = View.GONE
             // Some live MPEG-TS streams "end" when the server reconnects: carry on instead of stopping.
-            if (state == Player.STATE_ENDED && live) reconnect()
+            if (state == Player.STATE_ENDED && live) scheduleReconnect(immediate = true)
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             playButton.setImageResource(if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play)
+            if (isPlaying) {
+                playingSince = SystemClock.elapsedRealtime()
+                reconnectPill.visibility = View.GONE
+            }
         }
 
         override fun onPlayerError(e: PlaybackException) {
@@ -170,19 +225,50 @@ class PlayerActivity : Activity() {
             if (e.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW) {
                 p.seekToDefaultPosition(); p.prepare(); return
             }
-            if (live && retries < 3 && e.errorCode in RETRYABLE) { reconnect(); return }
-            buffering.visibility = View.GONE
-            findViewById<TextView>(R.id.error_text).text = getString(R.string.cannot_play, describe(e))
-            findViewById<View>(R.id.error_next).visibility = if (live && PlayQueue.items.size > 1) View.VISIBLE else View.GONE
-            setControls(false)
-            error.visibility = View.VISIBLE
-            findViewById<View>(R.id.error_retry).requestFocus()
+            // Live TV keeps trying for as long as it is on screen; a movie gives up after 6 tries.
+            // What can never work on this TV (an unsupported codec, DRM) says so at once.
+            val fatal = e.errorCode in FATAL || e.errorCode in 6000..6999
+            if (!fatal && (live || attempts < 6)) { scheduleReconnect(); return }
+            showError(e)
         }
     }
 
-    private fun reconnect() {
-        retries++
-        handler.postDelayed({ player?.let { it.seekToDefaultPosition(); it.prepare(); it.playWhenReady = true } }, 1500L * retries)
+    private fun showError(e: PlaybackException) {
+        handler.removeCallbacks(reconnectNow)
+        reconnectPending = false
+        buffering.visibility = View.GONE
+        reconnectPill.visibility = View.GONE
+        findViewById<TextView>(R.id.error_text).text = getString(R.string.cannot_play, describe(e))
+        findViewById<View>(R.id.error_next).visibility = if (live && PlayQueue.items.size > 1) View.VISIBLE else View.GONE
+        setControls(false)
+        error.visibility = View.VISIBLE
+        findViewById<View>(R.id.error_retry).requestFocus()
+    }
+
+    /** Reopens the stream after a pause that grows with each failure (2, 4, 8, 16, then 30 s). */
+    private fun scheduleReconnect(immediate: Boolean = false) {
+        if (reconnectPending) return
+        attempts++
+        reconnectPending = true
+        reconnectPill.text = getString(R.string.reconnecting, attempts)
+        reconnectPill.visibility = View.VISIBLE
+        handler.postDelayed(reconnectNow, if (immediate && attempts == 1) 0L else Backoff.delayMs(attempts))
+    }
+
+    private fun reopen() {
+        reconnectPending = false
+        val p = player ?: return
+        val item = PlayQueue.current ?: return
+        detector.reset(SystemClock.elapsedRealtime())
+        if (live) {
+            // On every second failure of an Xtream channel, try its other format (.m3u8 <-> .ts).
+            if (attempts >= 2 && attempts % 2 == 0) StreamUrls.alternate(currentUrl ?: item.url.orEmpty())?.let { currentUrl = it }
+            p.setMediaItem(Players.mediaItem(item, currentUrl) ?: return)
+        } else {
+            p.setMediaItem(Players.mediaItem(item, currentUrl) ?: return, p.currentPosition)
+        }
+        p.prepare()
+        p.playWhenReady = true
     }
 
     private fun play(item: Item) {
@@ -190,7 +276,12 @@ class PlayerActivity : Activity() {
         val media = Players.mediaItem(item) ?: return
         val url = item.url ?: return
         savePosition()
-        retries = 0
+        handler.removeCallbacks(reconnectNow)
+        reconnectPending = false
+        attempts = 0
+        currentUrl = url
+        detector.reset(SystemClock.elapsedRealtime())
+        reconnectPill.visibility = View.GONE
         error.visibility = View.GONE
         p.setMediaItem(media)
         if (item.kind == Kind.MOVIE || item.kind == Kind.EPISODE) {
@@ -430,12 +521,10 @@ class PlayerActivity : Activity() {
     }
 
     private companion object {
-        val RETRYABLE = setOf(
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-            PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
-            PlaybackException.ERROR_CODE_IO_UNSPECIFIED,
-            PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
-            PlaybackException.ERROR_CODE_PARSING_CONTAINER_MALFORMED,
+        /** Errors no retry can fix on this TV. */
+        val FATAL = setOf(
+            PlaybackException.ERROR_CODE_DECODING_FORMAT_UNSUPPORTED,
+            PlaybackException.ERROR_CODE_DECODING_FORMAT_EXCEEDS_CAPABILITIES,
         )
     }
 }

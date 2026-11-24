@@ -21,6 +21,23 @@
         android:indeterminateTint="@color/orange"
         android:visibility="gone" />
 
+    <!-- Shown while the stream is being reopened after a drop or a freeze. -->
+    <TextView
+        android:id="@+id/reconnect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="30dp"
+        android:background="@drawable/bg_card_dark"
+        android:paddingStart="16dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/orange_light"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
     <!-- Controls: fades, top-right buttons, centre buttons, bottom bar. -->
     <FrameLayout
         android:id="@+id/controls"

@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Playlists, logos and streams from the servers you add. The only permission this app asks for. -->
+    <!-- Playlists, logos and streams from the servers you add. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Keeps Wi-Fi awake while a stream plays (Media3 wake mode), so long viewing is not cut by Wi-Fi power saving. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Notices when the network comes back after a drop, to reconnect at once. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Made for TVs, but installs on boxes and phones too; on a phone every screen is landscape, like the TV. -->
     <uses-feature android:name="android.software.leanback" android:required="false" />

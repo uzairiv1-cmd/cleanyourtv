@@ -125,4 +125,5 @@
     <string name="pair_from_phone">📱  Add from your phone instead</string>
     <string name="set_pair">Add from phone or computer</string>
     <string name="set_pair_sub">Type your playlist on your phone: scan a QR code on the TV</string>
+    <string name="reconnecting">⟳  Reconnecting…  (%1$d)</string>
 </resources>

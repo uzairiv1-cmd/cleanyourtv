@@ -148,10 +148,13 @@ logos, and say that the app comes with no content. The app says so on its first 
 
 ## Permissions
 
-- `INTERNET` is the only permission. It fetches playlists, logos and streams, and only from the servers you add.
+- `INTERNET` fetches playlists, logos and streams, and only from the servers you add.
 - While the **Add from phone** screen is open, the app listens on the home network (port 8090 to 8099) for the
   page a phone opens; every request needs the six-digit code shown on the TV, and the listener closes with the screen.
   The page is plain http on your own network, like most IPTV panels.
+- `WAKE_LOCK` keeps Wi-Fi and the processor awake while a stream plays, so the TV's Wi-Fi power saving does not cut
+  long viewing. It is held only during playback.
+- `ACCESS_NETWORK_STATE` lets the player notice when the network comes back after a drop, to reconnect at once.
 - `usesCleartextTraffic` is on because most IPTV panels and playlists use plain http.
 - Logins and links are kept in the app's private storage on the TV. `allowBackup` is off, so they are not
   copied to a cloud backup or to another device. They are not encrypted beyond Android's own app
