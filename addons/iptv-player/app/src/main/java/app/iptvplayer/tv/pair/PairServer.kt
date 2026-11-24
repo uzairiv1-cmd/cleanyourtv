@@ -70,6 +70,14 @@ class PairServer(private val context: Context, private val onAdded: (Playlist) -
             val target = parts.getOrElse(1) { "/" }
             val path = target.substringBefore('?')
             val query = PairProtocol.parseForm(target.substringAfter('?', ""))
+            if (method == "GET" && path == "/logo.png") {
+                val png = context.resources.openRawResource(app.iptvplayer.tv.R.raw.logo_web).use { it.readBytes() }
+                val out = s.getOutputStream()
+                out.write("HTTP/1.1 200 OK\r\nContent-Type: image/png\r\nContent-Length: ${png.size}\r\nCache-Control: max-age=3600\r\nConnection: close\r\n\r\n".toByteArray())
+                out.write(png)
+                out.flush()
+                return
+            }
             val (status, html) = when {
                 closed -> "410 Gone" to PairProtocol.closedPage()
                 method == "GET" && path == "/" -> {

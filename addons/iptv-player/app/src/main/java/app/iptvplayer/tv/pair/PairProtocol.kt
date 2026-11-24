@@ -25,7 +25,7 @@ object PairProtocol {
         }
     }
 
-    private const val LOGO = """<svg class="logo" viewBox="0 50 740 530" aria-label="AV"><path fill="#FE5D09" fill-rule="evenodd" d="M256 66 L440 410 L140 410 L96 500 L8 500 Z M250 214 L184 350 L316 350 Z"/><path fill="#8A8A8A" d="M400 300 L462 300 L491 462 L626 198 L716 198 L528 566 L448 566 Z"/></svg>"""
+    private const val LOGO = """<img class="logo" src="/logo.png" alt="AV">"""
 
     private const val STYLE = """
 *{box-sizing:border-box;margin:0}
