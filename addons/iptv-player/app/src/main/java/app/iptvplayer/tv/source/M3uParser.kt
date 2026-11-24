@@ -22,7 +22,7 @@ object M3uParser {
         var extGroup = ""
         while (out.size < limit) {
             val raw = reader.readLine() ?: break
-            val line = raw.trim().removePrefix("﻿")
+            val line = raw.trim().removePrefix("\uFEFF")
             when {
                 line.isEmpty() -> Unit
                 line.startsWith("#EXTINF", ignoreCase = true) -> {

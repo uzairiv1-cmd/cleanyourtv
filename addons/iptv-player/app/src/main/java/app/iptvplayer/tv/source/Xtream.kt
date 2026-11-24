@@ -173,7 +173,7 @@ object XtreamParser {
 
     /** A field as text: "" for missing or JSON null (org.json's optString would give "null"). */
     internal fun s(o: JSONObject, key: String): String =
-        if (!o.has(key) || o.isNull(key)) "" else o.opt(key).toString().trim()
+        if (!o.has(key) || o.isNull(key)) "" else o.get(key).toString().trim()
 
     private fun rating(r: String): String {
         val v = r.toDoubleOrNull() ?: return ""

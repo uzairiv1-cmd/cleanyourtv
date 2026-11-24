@@ -2,6 +2,7 @@ package app.iptvplayer.tv.ui
 
 import android.app.Activity
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -10,6 +11,7 @@ import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import android.window.OnBackInvokedDispatcher
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -86,6 +88,12 @@ class MainActivity : Activity() {
         itemsView.layoutManager = GridLayoutManager(this, 2)
         itemsView.adapter = itemAdapter
         itemsView.setHasFixedSize(true)
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
+                if (!handleBack()) finish()
+            }
+        }
 
         filter.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -283,8 +291,8 @@ class MainActivity : Activity() {
         }
     }
 
-    @Deprecated("Back is still delivered here on the TVs this targets")
-    override fun onBackPressed() {
+    /** Back steps out of a series, then from the list to the categories, then clears the filter. False: leave the app. */
+    private fun handleBack(): Boolean {
         when {
             openSeries != null -> {
                 openSeries = null
@@ -296,7 +304,15 @@ class MainActivity : Activity() {
                 categoriesView.post { categoriesView.layoutManager?.findViewByPosition(i)?.requestFocus() }
             }
             filter.text.isNotEmpty() -> filter.setText("")
-            else -> super.onBackPressed()
+            else -> return false
         }
+        return true
+    }
+
+    // Android 13 and newer deliver Back through the callback registered in onCreate (Android 16
+    // no longer calls onBackPressed for apps that target it); older versions call this.
+    @Deprecated("Used only below Android 13")
+    override fun onBackPressed() {
+        if (!handleBack()) super.onBackPressed()
     }
 }

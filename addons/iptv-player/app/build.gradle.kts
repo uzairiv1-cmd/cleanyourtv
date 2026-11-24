@@ -5,18 +5,20 @@ plugins {
 
 android {
     namespace = "app.iptvplayer.tv"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "app.iptvplayer.tv"
+        // Set in gradle.properties; see the note there before the first Google Play upload.
+        applicationId = providers.gradleProperty("iptvAppId").get()
         minSdk = 26
-        targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        targetSdk = 36
+        versionCode = providers.gradleProperty("iptvVersionCode").get().toInt()
+        versionName = providers.gradleProperty("iptvVersionName").get()
     }
 
     // Release signing comes from the environment so the keystore never sits in the repo.
-    // The launcher pins the owner's card decision to this key: sign every release with the same one.
+    // For Google Play this is the upload key (Play App Signing holds the key users' devices see).
+    // The launcher pins the owner's card decision to the signing key: sign every release with the same one.
     val ks = System.getenv("IPTV_KEYSTORE")
     signingConfigs {
         if (ks != null) {

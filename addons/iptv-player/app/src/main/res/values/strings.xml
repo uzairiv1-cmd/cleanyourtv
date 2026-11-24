@@ -21,6 +21,7 @@
     <string name="delete">Delete</string>
     <string name="delete_confirm">Delete %1$s from this TV?</string>
     <string name="welcome">Welcome. Add your IPTV playlist</string>
+    <string name="no_content_notice">IPTV Player comes with no channels or content. It plays only the playlists you add from your own provider.</string>
     <string name="new_playlist">Add a playlist</string>
     <string name="edit_playlist">Edit playlist</string>
     <string name="label_name">Name (optional)</string>

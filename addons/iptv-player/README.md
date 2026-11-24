@@ -25,9 +25,38 @@ with no channels and only plays the playlists you add. Use only services you are
 Not done yet: an EPG/TV guide, catch-up, recording, a search across every category at once, parental PINs,
 DASH/RTMP/UDP streams, and DRM.
 
-## Install
+## Test it on your TV
 
-Build it (below), then install it from the repo root as with every add-on:
+You need the APK file and a way to get it onto the TV. Either way works on any Android TV, Google TV
+or Fire TV running Android 8 or newer.
+
+**Without a computer: a USB stick or "Send files to TV"**
+
+1. Copy `app-debug.apk` to a USB stick, or send it with the free *Send files to TV* app (on the phone and on
+   the TV).
+2. On the TV, install a file manager from the Play Store (for example *File Commander*, or *Downloader* on Fire TV).
+3. Allow that app to install apps: **Settings → Apps → Security & restrictions → Unknown sources**. On Google TV:
+   **Settings → Privacy → Security & restrictions → Unknown sources**. On Fire TV: **My Fire TV → Developer options →
+   Install unknown apps**.
+4. Open the APK in the file manager and press **Install**. Then switch Unknown sources off again for that app.
+
+**With a computer: ADB over the network**
+
+1. On the TV, open **Settings → Device Preferences → About** (on Google TV: **Settings → System → About**) and press
+   OK on **Android TV OS build** seven times, until it says you are a developer.
+2. In **Settings → Device Preferences → Developer options**, switch on **USB debugging** (and **Network debugging**
+   if the TV has it). Note the TV's IP address under **Settings → Network**.
+3. On the computer, with [platform-tools](https://developer.android.com/tools/releases/platform-tools) installed:
+
+   ```bash
+   adb connect <tv ip>:5555          # accept the prompt on the TV
+   adb install -r app-debug.apk
+   ```
+
+4. When you have finished testing, switch **USB debugging** and **Network debugging** off again: while they are on,
+   anyone on your network can control the TV.
+
+From this repository, with `tools/venv` set up, the same can be done with `tools/tv.py`:
 
 ```bash
 cd addons/iptv-player && ./gradlew assembleDebug && cd ../..
@@ -35,26 +64,62 @@ TV_HOST=<tv ip> tools/venv/bin/python -I tools/tv.py --push addons/iptv-player/a
 TV_HOST=<tv ip> tools/venv/bin/python -I tools/tv.py 'pm install -r /data/local/tmp/addon.apk; rm -f /data/local/tmp/addon.apk'
 ```
 
-You can also use `adb install -r app/build/outputs/apk/debug/app-debug.apk`. It opens from the TV's app list as
-**IPTV Player**.
+**What to try**
 
-The debug APK is signed with a throwaway key that changes from one machine to the next. For a copy you keep,
-build a release signed with your own key: the launcher ties its approval of the card to the signing key, so a
-different key makes it ask again.
+- A legal test playlist: choose **M3U link** and enter `https://iptv-org.github.io/iptv/index.m3u` (free-to-air
+  channels collected by the iptv-org project; some of them are always offline).
+- Your own Xtream Codes account: server, username and password from your provider.
+- Every screen with the remote alone: the tabs, the categories (Up/Down), the list (Left back to the categories),
+  Back from each screen, long-press OK for a favourite, Up/Down to change channel in the player, OK for the
+  controls, and audio and subtitle tracks there.
 
-```bash
-IPTV_KEYSTORE=/path/to/release.jks IPTV_KEYSTORE_PASSWORD=… IPTV_KEY_ALIAS=… IPTV_KEY_PASSWORD=… ./gradlew assembleRelease
-```
+The debug APK is signed with a throwaway key. Installing the Play version later over it fails with a signature
+error: uninstall the test version first.
 
 ## Build
 
-JDK 17 and the Android SDK (platform 34, build-tools 34.0.0), as for the launcher. In this folder:
+JDK 17 and the Android SDK (platform 36). In this folder:
 
 ```bash
-./gradlew --no-daemon testReleaseUnitTest assembleRelease
+./gradlew --no-daemon testReleaseUnitTest lintRelease assembleDebug
 ```
 
 The unit tests cover the M3U and Xtream parsers (`app/src/test`).
+
+## Publish on Google Play
+
+Only you can publish it: the upload goes through your own Google Play developer account. The text for the
+listing, the data safety and content rating answers, the graphics and a privacy policy are in
+[`play-store/`](play-store/): [`listing.md`](play-store/listing.md) and
+[`privacy-policy.md`](play-store/privacy-policy.md).
+
+1. **Choose the app ID** in `gradle.properties` (`iptvAppId`), for example `com.yourname.iptvplayer`. It cannot
+   change after the first upload.
+2. **Make an upload key**, once, and keep it and its passwords somewhere safe outside this repository:
+
+   ```bash
+   keytool -genkeypair -v -keystore ~/iptv-upload.jks -keyalg RSA -keysize 4096 -validity 10000 -alias upload
+   ```
+
+3. **Build the bundle** signed with it:
+
+   ```bash
+   IPTV_KEYSTORE=~/iptv-upload.jks IPTV_KEYSTORE_PASSWORD=… IPTV_KEY_ALIAS=upload IPTV_KEY_PASSWORD=… \
+     ./gradlew --no-daemon bundleRelease
+   ```
+
+   The file to upload is `app/build/outputs/bundle/release/app-release.aab`. For every later upload, raise
+   `iptvVersionCode` in `gradle.properties` by one.
+4. **In the Play Console** ([play.google.com/console](https://play.google.com/console), one-time registration fee):
+   create the app, accept **Play App Signing**, and fill in the store listing, privacy policy URL, data safety,
+   content rating and app access from `play-store/listing.md`. Add the TV banner and at least one TV screenshot,
+   then opt in to **Android TV** under Advanced settings → Form factors.
+5. **Test first.** Upload the bundle to *Internal testing* to install it on your own TV from Play. New personal
+   developer accounts must then run a *Closed test* with at least 12 testers for 14 days before Production
+   opens up.
+
+Play reviews IPTV players strictly. Keep the listing and screenshots free of providers, channel names and
+logos, and say that the app comes with no content. The app says so on its first screen too.
 
 ## Use
 
