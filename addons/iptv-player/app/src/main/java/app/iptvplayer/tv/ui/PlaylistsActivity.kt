@@ -37,6 +37,7 @@ class PlaylistsActivity : Activity() {
             list.addView(v)
             return v
         }
+        row(getString(R.string.pair_from_phone), "") { startActivity(Intent(this, app.iptvplayer.tv.pair.PairActivity::class.java)) }
         row(getString(R.string.add_playlist), "") { startActivity(Intent(this, PlaylistEditActivity::class.java)) }
         var focus: TextView? = null
         for (p in Store.playlists(this)) {

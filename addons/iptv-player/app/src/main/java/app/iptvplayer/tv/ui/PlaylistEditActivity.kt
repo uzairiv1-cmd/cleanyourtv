@@ -32,6 +32,7 @@ class PlaylistEditActivity : Activity() {
     companion object {
         const val EXTRA_ID = "id"
         const val EXTRA_FIRST = "first"
+        private const val REQUEST_PAIR = 7
     }
 
     private val scope = MainScope()
@@ -76,6 +77,11 @@ class PlaylistEditActivity : Activity() {
         tabXtream.setOnClickListener { setType(SourceType.XTREAM) }
         tabM3u.setOnClickListener { setType(SourceType.M3U) }
         save.setOnClickListener { onSave() }
+        findViewById<View>(R.id.btn_pair).setOnClickListener {
+            @Suppress("DEPRECATION")
+            startActivityForResult(android.content.Intent(this, app.iptvplayer.tv.pair.PairActivity::class.java), REQUEST_PAIR)
+        }
+        if (intent.getBooleanExtra(EXTRA_FIRST, false)) findViewById<View>(R.id.btn_pair).requestFocus()
         // A changed field is checked again rather than saved with "Save anyway".
         val reset = object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
@@ -86,6 +92,14 @@ class PlaylistEditActivity : Activity() {
         }
         listOf(server, username, password, url).forEach { it.addTextChangedListener(reset) }
         setType(type)
+    }
+
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        // A playlist came from the phone: it is saved and active, so this form is done.
+        if (requestCode == REQUEST_PAIR && resultCode == RESULT_OK) finish()
     }
 
     override fun onDestroy() {

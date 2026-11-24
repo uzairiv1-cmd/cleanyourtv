@@ -112,4 +112,17 @@
     <string name="picture_fill">Picture: fill</string>
     <string name="picture_zoom">Picture: zoom</string>
     <string name="speed_n">Speed: %1$s</string>
+    <string name="pair_title">Add a playlist from your phone</string>
+    <string name="pair_sub">Type your login on your phone or computer instead of with the remote.</string>
+    <string name="pair_step1">1   Connect your phone to the same Wi-Fi as the TV</string>
+    <string name="pair_step2">2   Scan the QR code, or open this address in a browser:</string>
+    <string name="pair_step3">3   Enter this code if the page asks for it:</string>
+    <string name="pair_waiting">Waiting for your phone…</string>
+    <string name="pair_added">✓  Added “%1$s”. Opening it now…</string>
+    <string name="pair_no_network">The TV is not connected to a network. Connect it to Wi-Fi or Ethernet and try again.</string>
+    <string name="pair_close">Close</string>
+    <string name="pair_qr">QR code with the address of the page</string>
+    <string name="pair_from_phone">📱  Add from your phone instead</string>
+    <string name="set_pair">Add from phone or computer</string>
+    <string name="set_pair_sub">Type your playlist on your phone: scan a QR code on the TV</string>
 </resources>

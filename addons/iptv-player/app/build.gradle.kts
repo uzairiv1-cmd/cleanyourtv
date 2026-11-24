@@ -60,6 +60,8 @@ dependencies {
     implementation("androidx.media3:media3-ui:$media3")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    // QR code on the "Add from phone" screen.
+    implementation("com.google.zxing:core:3.5.3")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

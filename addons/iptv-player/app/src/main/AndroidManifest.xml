@@ -41,6 +41,7 @@
             <meta-data android:name="com.gathin.tvhome.card" android:resource="@xml/module_card" />
         </activity>
 
+        <activity android:name=".pair.PairActivity" android:exported="false" android:screenOrientation="sensorLandscape" />
         <activity android:name=".ui.PlaylistsActivity" android:screenOrientation="sensorLandscape" android:exported="false" />
         <activity android:name=".ui.PlaylistEditActivity" android:screenOrientation="sensorLandscape" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity

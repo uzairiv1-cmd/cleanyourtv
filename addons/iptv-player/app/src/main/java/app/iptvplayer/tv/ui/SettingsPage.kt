@@ -15,7 +15,10 @@ class SettingsPage(host: MainActivity) : Page(host, R.layout.page_settings) {
     private val first: View
 
     init {
-        first = row(R.string.set_playlists, R.string.set_playlists_sub, { "" }) {
+        first = row(R.string.set_pair, R.string.set_pair_sub, { "" }) {
+            host.startActivity(Intent(host, app.iptvplayer.tv.pair.PairActivity::class.java))
+        }
+        row(R.string.set_playlists, R.string.set_playlists_sub, { "" }) {
             host.startActivity(Intent(host, PlaylistsActivity::class.java))
         }
         row(R.string.set_add, R.string.set_add_sub, { "" }) {
