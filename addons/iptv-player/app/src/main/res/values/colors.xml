@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#FF0D1117</color>
+    <color name="panel">#FF161B22</color>
+    <color name="accent">#FF2EC4B6</color>
+    <color name="text">#FFE6EDF3</color>
+    <color name="text_dim">#FF8B949E</color>
+    <color name="focus_fill">#FF23303D</color>
+    <color name="selected_fill">#FF1B2A2E</color>
+</resources>

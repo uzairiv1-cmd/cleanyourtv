@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">IPTV Player</string>
+    <string name="tab_live">Live TV</string>
+    <string name="tab_movies">Movies</string>
+    <string name="tab_series">Series</string>
+    <string name="filter_hint">Filter</string>
+    <string name="playlists">Playlists</string>
+    <string name="favorites">★ Favourites</string>
+    <string name="no_favorites">No favourites yet. Long-press OK on a channel, movie or series to add it.</string>
+    <string name="nothing_here">Nothing here.</string>
+    <string name="no_match">Nothing matches “%1$s”.</string>
+    <string name="error_generic">Something went wrong</string>
+    <string name="fav_added">Added to favourites: %1$s</string>
+    <string name="fav_removed">Removed from favourites: %1$s</string>
+    <string name="add_playlist">+  Add a playlist</string>
+    <string name="type_xtream">Xtream Codes</string>
+    <string name="type_m3u">M3U link</string>
+    <string name="open">Open</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="delete_confirm">Delete %1$s from this TV?</string>
+    <string name="welcome">Welcome. Add your IPTV playlist</string>
+    <string name="new_playlist">Add a playlist</string>
+    <string name="edit_playlist">Edit playlist</string>
+    <string name="label_name">Name (optional)</string>
+    <string name="label_server">Server address, e.g. http://example.com:8080</string>
+    <string name="label_username">Username</string>
+    <string name="label_password">Password</string>
+    <string name="label_url">M3U / M3U8 link</string>
+    <string name="edit_hint">An Xtream Codes link (…/get.php?username=…&amp;password=…) pasted into either field is set up as Xtream automatically. Logins stay on this TV.</string>
+    <string name="save">Save</string>
+    <string name="save_anyway">Save anyway</string>
+    <string name="checking">Checking the login…</string>
+    <string name="connected">Connected</string>
+    <string name="connected_until">Connected. The account runs until %1$s</string>
+    <string name="need_url">Enter a link that starts with http:// or https://</string>
+    <string name="need_login">Enter the server, username and password</string>
+    <string name="recognised_xtream">That is an Xtream Codes link: saved as Xtream, with Movies and Series</string>
+    <string name="cannot_play">Can\'t play this stream: %1$s</string>
+    <string name="err_http">the server refused it (the account may be busy on another screen, or expired)</string>
+    <string name="err_network">the connection failed</string>
+    <string name="err_format">the stream format is not supported</string>
+    <string name="err_decoder">this TV can\'t decode the video or audio</string>
+</resources>
