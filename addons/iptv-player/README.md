@@ -64,6 +64,14 @@ TV_HOST=<tv ip> tools/venv/bin/python -I tools/tv.py --push addons/iptv-player/a
 TV_HOST=<tv ip> tools/venv/bin/python -I tools/tv.py 'pm install -r /data/local/tmp/addon.apk; rm -f /data/local/tmp/addon.apk'
 ```
 
+**On an Android phone**
+
+The same APK installs on an Android phone running Android 8 or newer (not on an iPhone). Open the APK on the
+phone, from a download or a file sent to yourself, and allow your browser or Files app to install apps when Android
+asks. Every screen turns to landscape, as on the TV. Tap to choose, long-press for a favourite, and tap the video for the
+player controls. Changing channel with Up/Down needs a remote or keyboard, so on a phone go back to the list for
+another channel.
+
 **What to try**
 
 - A legal test playlist: choose **M3U link** and enter `https://iptv-org.github.io/iptv/index.m3u` (free-to-air

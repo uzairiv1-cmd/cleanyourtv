@@ -4,7 +4,7 @@
     <!-- Playlists, logos and streams from the servers you add. The only permission this app asks for. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Made for TVs, but installs on boxes and phones too. -->
+    <!-- Made for TVs, but installs on boxes and phones too; on a phone every screen is landscape, like the TV. -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
@@ -24,7 +24,7 @@
         android:usesCleartextTraffic="true">
 
         <activity
-            android:name=".ui.MainActivity"
+            android:name=".ui.MainActivity" android:screenOrientation="sensorLandscape"
             android:exported="true"
             android:launchMode="singleTask"
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation">
@@ -41,10 +41,10 @@
             <meta-data android:name="com.gathin.tvhome.card" android:resource="@xml/module_card" />
         </activity>
 
-        <activity android:name=".ui.PlaylistsActivity" android:exported="false" />
-        <activity android:name=".ui.PlaylistEditActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".ui.PlaylistsActivity" android:screenOrientation="sensorLandscape" android:exported="false" />
+        <activity android:name=".ui.PlaylistEditActivity" android:screenOrientation="sensorLandscape" android:exported="false" android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".player.PlayerActivity"
+            android:name=".player.PlayerActivity" android:screenOrientation="sensorLandscape"
             android:exported="false"
             android:theme="@style/Theme.Iptv.Player"
             android:configChanges="keyboard|keyboardHidden|navigation|screenSize|smallestScreenSize|screenLayout|orientation" />
