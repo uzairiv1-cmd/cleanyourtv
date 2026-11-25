@@ -17,7 +17,12 @@ object PlayQueue {
     var playlistId: String = ""
         private set
 
-    fun set(list: List<Item>, start: Int, title: String = "", playlistId: String = "") {
+    /** The group the list came from, when it is one (the channel menu opens on it). */
+    var category: app.iptvplayer.tv.Category? = null
+        private set
+
+    fun set(list: List<Item>, start: Int, title: String = "", playlistId: String = "", category: app.iptvplayer.tv.Category? = null) {
+        this.category = category
         this.title = title
         this.playlistId = playlistId
         items = list

@@ -24,6 +24,9 @@ class SettingsPage(host: MainActivity) : Page(host, R.layout.page_settings) {
         row(R.string.set_add, R.string.set_add_sub, { "" }) {
             host.startActivity(Intent(host, PlaylistEditActivity::class.java))
         }
+        row(R.string.set_start_live, R.string.set_start_live_sub, { onOff(Store.startInLive(host)) }) {
+            Store.setStartInLive(host, !Store.startInLive(host))
+        }
         row(R.string.set_preview, R.string.set_preview_sub, { onOff(Store.previewEnabled(host)) }) {
             Store.setPreviewEnabled(host, !Store.previewEnabled(host))
         }

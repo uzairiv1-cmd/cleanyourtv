@@ -35,6 +35,8 @@ data class Item(
     val url: String?,
     val kind: Kind,
     val info: String = "",
+    /** The channel's key in the TV guide: the Xtream stream id, or the M3U `tvg-id`. */
+    val epgId: String = "",
 ) {
     val section: Section
         get() = when (kind) {

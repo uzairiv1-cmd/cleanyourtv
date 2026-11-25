@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/black">
@@ -21,24 +22,36 @@
         android:indeterminateTint="@color/orange"
         android:visibility="gone" />
 
-    <!-- Shown while the stream is being reopened after a drop or a freeze. -->
-    <TextView
-        android:id="@+id/reconnect"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|center_horizontal"
-        android:layout_marginTop="30dp"
-        android:background="@drawable/bg_card_dark"
-        android:paddingStart="16dp"
-        android:paddingTop="8dp"
-        android:paddingEnd="16dp"
-        android:paddingBottom="8dp"
-        android:textColor="@color/orange_light"
-        android:textSize="13sp"
-        android:textStyle="bold"
+    <!-- Dims the picture behind the channel menu, guide and groups; a tap closes them. -->
+    <View
+        android:id="@+id/scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#73000000"
+        android:clickable="true"
+        android:focusable="false"
         android:visibility="gone" />
 
-    <!-- Controls: fades, top-right buttons, centre buttons, bottom bar. -->
+    <ImageView
+        android:id="@+id/corner_logo"
+        android:layout_width="58dp"
+        android:layout_height="42dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="20dp"
+        android:layout_marginEnd="28dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/av_logo"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/clock_badge"
+        style="@style/OverlayChip"
+        android:layout_gravity="top|start"
+        android:layout_marginStart="28dp"
+        android:layout_marginTop="23dp"
+        android:visibility="gone" />
+
+    <!-- Movie and episode controls (live TV uses the channel menu instead). -->
     <FrameLayout
         android:id="@+id/controls"
         android:layout_width="match_parent"
@@ -57,16 +70,7 @@
             android:clipChildren="false"
             android:gravity="center_vertical"
             android:orientation="horizontal">
-
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="34dp"
-                android:layout_marginEnd="14dp"
-                android:alpha="0.9"
-                android:importantForAccessibility="no"
-                android:src="@drawable/av_logo" />
             <ImageView android:id="@+id/btn_tracks" style="@style/RoundIcon" android:contentDescription="@string/options" android:src="@drawable/ic_cc" />
-            <ImageView android:id="@+id/btn_list" style="@style/RoundIcon" android:layout_marginStart="8dp" android:contentDescription="@string/channels" android:src="@drawable/ic_list" />
         </LinearLayout>
 
         <LinearLayout
@@ -76,8 +80,7 @@
             android:clipChildren="false"
             android:gravity="center"
             android:orientation="horizontal">
-
-            <ImageView android:id="@+id/btn_prev" style="@style/RoundIcon" android:layout_width="48dp" android:layout_height="48dp" android:padding="14dp" android:contentDescription="@string/previous" android:src="@drawable/ic_prev" />
+            <ImageView android:id="@+id/btn_prev" style="@style/RoundIcon" android:layout_width="48dp" android:layout_height="48dp" android:padding="14dp" android:contentDescription="@string/previous" android:src="@drawable/ic_back10" />
             <ImageView
                 android:id="@+id/btn_play"
                 android:layout_width="66dp"
@@ -89,7 +92,7 @@
                 android:focusable="true"
                 android:padding="20dp"
                 android:src="@drawable/ic_pause" />
-            <ImageView android:id="@+id/btn_next" style="@style/RoundIcon" android:layout_width="48dp" android:layout_height="48dp" android:padding="14dp" android:contentDescription="@string/next" android:src="@drawable/ic_next" />
+            <ImageView android:id="@+id/btn_next" style="@style/RoundIcon" android:layout_width="48dp" android:layout_height="48dp" android:padding="14dp" android:contentDescription="@string/next" android:src="@drawable/ic_fwd10" />
         </LinearLayout>
 
         <LinearLayout
@@ -100,15 +103,12 @@
             android:layout_marginEnd="35dp"
             android:layout_marginBottom="26dp"
             android:orientation="vertical">
-
             <LinearLayout
-                android:id="@+id/seek_row"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="10dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
-
                 <TextView android:id="@+id/time_now" style="@style/PlayerSmall" />
                 <ProgressBar
                     android:id="@+id/seek"
@@ -122,64 +122,130 @@
                     android:progressDrawable="@drawable/progress_orange" />
                 <TextView android:id="@+id/time_left" style="@style/PlayerSmall" />
             </LinearLayout>
-
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
-
-                <include android:id="@+id/bottom_live" layout="@layout/part_live_badge" />
-                <TextView android:id="@+id/position" style="@style/PlayerSmall" android:layout_marginStart="12dp" />
+                <TextView android:id="@+id/position" style="@style/PlayerSmall" />
                 <Space android:layout_width="0dp" android:layout_height="1dp" android:layout_weight="1" />
                 <TextView android:id="@+id/hints" style="@style/PlayerSmall" android:textColor="#BBFFFFFF" />
             </LinearLayout>
         </LinearLayout>
     </FrameLayout>
 
-    <!-- Channel banner, shown on every change of channel. -->
+    <!-- Programme description, above the info bar. -->
     <LinearLayout
-        android:id="@+id/banner"
-        android:layout_width="350dp"
+        android:id="@+id/desc_panel"
+        android:layout_width="400dp"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|start"
-        android:layout_marginStart="35dp"
-        android:layout_marginTop="30dp"
-        android:background="@drawable/bg_card_dark"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="11dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="112dp"
+        android:background="@drawable/bg_overlay"
+        android:orientation="vertical"
+        android:padding="15dp"
+        android:visibility="gone">
+        <TextView android:id="@+id/desc_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/text" android:textSize="14sp" android:textStyle="bold" />
+        <TextView android:id="@+id/desc_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="3dp" android:textColor="@color/orange_light" android:textSize="10sp" android:textStyle="bold" />
+        <TextView android:id="@+id/desc_text" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:lineSpacingExtra="2dp" android:maxLines="8" android:ellipsize="end" android:textColor="#FFC9CCD2" android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Info bar: channel, now and next with minutes, clock, favourite, live. -->
+    <FrameLayout
+        android:id="@+id/info_bar"
+        android:layout_width="match_parent"
+        android:layout_height="75dp"
+        android:layout_gravity="bottom"
+        android:layout_marginStart="28dp"
+        android:layout_marginEnd="28dp"
+        android:layout_marginBottom="23dp"
+        android:background="@drawable/bg_overlay"
         android:visibility="gone">
 
-        <ImageView
-            android:id="@+id/banner_logo"
-            android:layout_width="55dp"
-            android:layout_height="37dp"
-            android:background="@drawable/round_clip"
-            android:importantForAccessibility="no"
-            android:scaleType="fitCenter" />
+        <ProgressBar
+            android:id="@+id/info_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="9dp"
+            android:layout_marginEnd="16dp"
+            android:max="1000"
+            android:progressDrawable="@drawable/progress_orange" />
 
         <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="13dp"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginTop="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp">
 
-            <TextView android:id="@+id/banner_cap" style="@style/Cap" />
-            <TextView
-                android:id="@+id/banner_title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:ellipsize="end"
-                android:singleLine="true"
-                android:textColor="#FFFFFFFF"
-                android:textSize="19sp"
-                android:textStyle="bold" />
+            <TextView android:id="@+id/info_number" android:layout_width="wrap_content" android:layout_height="wrap_content" android:minWidth="22dp" android:textColor="@color/orange_light" android:textSize="17sp" android:textStyle="bold" />
+            <ImageView android:id="@+id/info_logo" android:layout_width="38dp" android:layout_height="25dp" android:layout_marginStart="9dp" android:background="@drawable/round_clip" android:importantForAccessibility="no" android:scaleType="fitCenter" />
+            <TextView android:id="@+id/info_name" android:layout_width="230dp" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:ellipsize="end" android:singleLine="true" android:textColor="@color/text" android:textSize="15sp" android:textStyle="bold" />
+
+            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:layout_weight="1" android:orientation="vertical">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <TextView android:id="@+id/now_time" style="@style/InfoTime" android:textColor="@color/orange_light" />
+                    <TextView android:id="@+id/now_title" style="@style/InfoTitle" />
+                    <TextView android:id="@+id/now_left" style="@style/InfoLeft" />
+                </LinearLayout>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:orientation="horizontal">
+                    <TextView android:id="@+id/next_time" style="@style/InfoTime" />
+                    <TextView android:id="@+id/next_title" style="@style/InfoTitle" android:textColor="#FFB8BCC4" />
+                    <TextView android:id="@+id/next_left" style="@style/InfoLeft" android:textColor="#FFB8BCC4" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="18dp" android:gravity="end" android:orientation="vertical">
+                <TextView android:id="@+id/info_clock" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/text" android:textSize="13sp" />
+                <TextView android:id="@+id/info_star" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="★" android:textColor="@color/orange_light" android:textSize="12sp" />
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="● LIVE" android:textColor="@color/live_red" android:textSize="8.5sp" android:textStyle="bold" />
+            </LinearLayout>
         </LinearLayout>
+    </FrameLayout>
 
-        <include android:id="@+id/banner_live" layout="@layout/part_live_badge" />
+    <!-- Touch toolbar for phones and touch screens. -->
+    <LinearLayout
+        android:id="@+id/touch_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="18dp"
+        android:background="@drawable/bg_overlay"
+        android:orientation="horizontal"
+        android:padding="4dp"
+        android:visibility="gone">
+        <TextView android:id="@+id/t_channels" style="@style/TouchButton" android:text="@string/t_channels" />
+        <TextView android:id="@+id/t_groups" style="@style/TouchButton" android:text="@string/t_groups" />
+        <TextView android:id="@+id/t_guide" style="@style/TouchButton" android:text="@string/t_guide" />
+        <TextView android:id="@+id/t_info" style="@style/TouchButton" android:text="@string/t_info" />
+        <TextView android:id="@+id/t_options" style="@style/TouchButton" android:text="@string/t_options" />
+        <TextView android:id="@+id/t_close" style="@style/TouchButton" android:text="@string/t_close" />
     </LinearLayout>
+
+    <!-- Channel menu, guide and groups: a centred panel with a tab above and the colour keys below. -->
+    <include android:id="@+id/menu_panel" layout="@layout/part_overlay_panel" android:layout_width="575dp" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+    <include android:id="@+id/guide_panel" layout="@layout/part_overlay_panel" android:layout_width="575dp" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+    <include android:id="@+id/groups_panel" layout="@layout/part_overlay_panel" android:layout_width="375dp" android:layout_height="wrap_content" android:layout_gravity="center" android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/reconnect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="60dp"
+        android:background="@drawable/bg_card_dark"
+        android:paddingStart="16dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="8dp"
+        android:textColor="@color/orange_light"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
 
     <TextView
         android:id="@+id/flash"
@@ -196,41 +262,6 @@
         android:textStyle="bold"
         android:visibility="gone" />
 
-    <!-- Channel list panel. -->
-    <LinearLayout
-        android:id="@+id/drawer"
-        android:layout_width="320dp"
-        android:layout_height="match_parent"
-        android:layout_gravity="end"
-        android:background="@drawable/bg_panel"
-        android:orientation="vertical"
-        android:paddingStart="20dp"
-        android:paddingTop="28dp"
-        android:paddingEnd="20dp"
-        android:visibility="gone">
-
-        <TextView android:id="@+id/drawer_cap" style="@style/Cap" />
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
-            android:text="@string/channels"
-            android:textColor="#FFFFFFFF"
-            android:textSize="22sp"
-            android:textStyle="bold" />
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/drawer_list"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_marginTop="12dp"
-            android:layout_weight="1"
-            android:clipChildren="false"
-            android:clipToPadding="false"
-            android:paddingBottom="20dp"
-            android:scrollbars="none" />
-    </LinearLayout>
-
-    <!-- Error card. -->
     <LinearLayout
         android:id="@+id/error"
         android:layout_width="400dp"
@@ -242,22 +273,8 @@
         android:orientation="vertical"
         android:padding="22dp"
         android:visibility="gone">
-
-        <TextView
-            android:id="@+id/error_text"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textColor="#FFFFFFFF"
-            android:textSize="14sp" />
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:clipChildren="false"
-            android:orientation="horizontal">
-
+        <TextView android:id="@+id/error_text" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:textColor="#FFFFFFFF" android:textSize="14sp" />
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:clipChildren="false" android:orientation="horizontal">
             <TextView android:id="@+id/error_retry" style="@style/ButtonOrange" android:text="@string/try_again" />
             <TextView android:id="@+id/error_next" style="@style/ButtonGlass" android:layout_marginStart="8dp" android:text="@string/next_channel" />
         </LinearLayout>

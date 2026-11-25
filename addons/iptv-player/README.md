@@ -18,14 +18,16 @@ with no channels and only plays the playlists you add. Use only services you are
 | Live TV | Categories on the left (with **All channels** for Xtream), numbered channels in the middle, and on the right a muted **live preview** of the focused channel with Watch and Favourite. The preview can be turned off in Settings |
 | Movies and Series | Category chips and a poster wall with rating and progress. A series opens its episodes |
 | Search | One search over every channel, movie and series of the playlist |
-| Player | Media3 (ExoPlayer): HLS and progressive streams (MPEG-TS, MP4, MKV). Live: **Up/Down or Channel +/- change channel** with a channel banner, **Right** opens the channel list, Left returns to the previous channel, number keys jump to a channel. Movies and episodes: Left/Right jump 10 seconds and they resume where you stopped. OK shows the controls: audio, subtitles, picture fit and speed. A stream that drops is reconnected |
+| Live TV overlay | The app opens straight into full-screen live TV on the last channel watched (switch off under Settings → Open in live TV). An **info bar** at the bottom shows the channel, the programme now and next with minutes left, a progress line, the clock, the favourite star and LIVE; **Info** adds the programme description. **OK or Right** opens the **channel menu** in the middle: the group as a tab (◀ ▶ switch group), numbered rows with logo, programme, "+minutes left" and a small progress line, and a coloured-key legend. **Green** opens the **channel guide** (the day's programmes, the current one marked NOW), **Blue** the groups, **Yellow** all channels, **Red** a favourite. Up/Down or Channel +/- change channel, Left returns to the previous channel, number keys jump. On a phone: tap for the info bar and a toolbar (Channels, Groups, TV guide, Info, Options), swipe up or down to change channel |
+| TV guide (EPG) | Xtream: the provider's short EPG for each channel. M3U: the XMLTV guide named in the playlist header (`x-tvg-url` / `url-tvg`, gzip too), matched by `tvg-id` or the channel name, refreshed every 6 hours |
+| Player | Media3 (ExoPlayer): HLS and progressive streams (MPEG-TS, MP4, MKV). Movies and episodes: Left/Right jump 10 seconds and they resume where you stopped. OK shows the controls: audio, subtitles, picture fit and speed. A stream that drops or freezes is reconnected, switching between `.m3u8` and `.ts` if needed |
 | Xtream Codes | Log in with server, username and password, checked before saving. Live TV, Movies and Series, each category loaded when you open it |
 | M3U / M3U8 links | `#EXTINF` with `tvg-name`, `tvg-logo`, `group-title`, plus `#EXTGRP`, read line by line. A `…/get.php?username=…&password=…` link is saved as an Xtream account |
 | Add from phone | **Settings → Add from phone or computer** (also on the first screen) shows a QR code, an address and a six-digit code. Scan it with a phone on the same Wi-Fi, or open the address in any browser, and type the Xtream login or M3U link there. The TV checks the login, saves it and opens it. The page is served by the TV itself, only while that screen is open (15 minutes at most), and refuses anything without the code |
 | Favourites | Hold OK on a channel, movie or series. Each playlist has its own |
-| Settings | Playlists, live preview, resume, and clearing the watch history |
+| Settings | Playlists, open in live TV, live preview, resume, and clearing the watch history |
 
-Not done yet: an EPG/TV guide, catch-up, recording, parental PINs, DASH/RTMP/UDP streams, and DRM.
+Not done yet: catch-up, recording, parental PINs, DASH/RTMP/UDP streams, and DRM.
 
 ## Test it on your TV
 
@@ -55,7 +57,7 @@ your own upload key, so later versions signed with the same key install over it 
 
    ```bash
    adb connect <tv ip>:5555          # accept the prompt on the TV
-   adb install -r IPTV-Player-1.0.0.apk
+   adb install -r IPTV-Player-1.2.0.apk
    ```
 
 4. When you have finished testing, switch **USB debugging** and **Network debugging** off again: while they are on,
@@ -97,7 +99,7 @@ JDK 17 and the Android SDK (platform 36). In this folder:
 ./gradlew --no-daemon testReleaseUnitTest lintRelease assembleDebug
 ```
 
-The unit tests cover the M3U and Xtream parsers (`app/src/test`).
+The unit tests cover the M3U, Xtream and EPG parsers and the reconnect logic (`app/src/test`).
 
 ## Publish on Google Play
 
@@ -144,7 +146,7 @@ logos, and say that the app comes with no content. The app says so on its first 
 3. Choose **Live TV**, **Movies** or **Series**, move through the categories on the left (each one loads
    when you stop on it), and press OK to play. In Series, OK on a show lists its episodes and Back
    returns.
-4. In the player: Back leaves. On live TV, Up/Down or Channel +/- change channel, and OK shows the controls.
+4. In the player: Back closes the open panel, then leaves. On live TV, Up/Down or Channel +/- change channel, and OK opens the channel menu.
 
 ## Permissions
 

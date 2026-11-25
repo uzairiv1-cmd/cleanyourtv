@@ -7,6 +7,7 @@ import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import app.iptvplayer.tv.Category
 import app.iptvplayer.tv.Item
 import app.iptvplayer.tv.Kind
 import app.iptvplayer.tv.R
@@ -31,7 +32,9 @@ class HomePage(host: MainActivity) : Page(host, R.layout.page_home) {
         img.clipToBackground()
         ImageLoader.load(img, item.logo, MonogramDrawable(item.title, circle = true), 120)
         v.findViewById<TextView>(R.id.title).text = item.title
-        v.setOnClickListener { host.play(favChannels, i, host.getString(R.string.favourite_channels)) }
+        v.setOnClickListener {
+            host.play(favChannels, i, host.getString(R.string.favourite_channels), Category(Category.FAVORITES, host.getString(R.string.favorites)))
+        }
         v.setOnLongClickListener { host.toggleFavorite(item); refresh(); true }
         v.zoomOnFocus(1.1f)
     }

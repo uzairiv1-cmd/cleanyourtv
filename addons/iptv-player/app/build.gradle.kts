@@ -65,4 +65,6 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+    // XmlPullParser outside Android, for the XMLTV guide tests.
+    testImplementation("net.sf.kxml:kxml2:2.3.0")
 }

@@ -16,7 +16,9 @@ import app.iptvplayer.tv.Item
 import app.iptvplayer.tv.Playlist
 import app.iptvplayer.tv.R
 import app.iptvplayer.tv.Section
+import app.iptvplayer.tv.data.Session
 import app.iptvplayer.tv.data.Store
+import app.iptvplayer.tv.Category
 import app.iptvplayer.tv.player.PlayQueue
 import app.iptvplayer.tv.player.PlayerActivity
 import app.iptvplayer.tv.source.Source
@@ -52,6 +54,8 @@ class MainActivity : Activity() {
     private var askedForFirst = false
     private var splashJob: Job? = null
     private var splashShownAt = 0L
+    /** Opening the app goes straight into live TV once; coming back from the player shows Home. */
+    private var liveStarted = false
 
     private val current: Page? get() = stack.lastOrNull()
 
@@ -104,12 +108,14 @@ class MainActivity : Activity() {
         }
         if (!this::playlist.isInitialized || active != playlist) {
             playlist = active
-            source = Source.create(active)
+            source = Session.source(this) ?: Source.create(active)
             pages.values.forEach { it.onHidden() }
             pages.clear()
             stack.clear()
             content.removeAllViews()
             show(Tab.HOME, focusContent = true)
+            if (!liveStarted && Store.startInLive(this)) startLive()
+            liveStarted = true
         } else {
             current?.onShown()
         }
@@ -210,16 +216,46 @@ class MainActivity : Activity() {
         return super.dispatchKeyEvent(event)
     }
 
-    fun play(items: List<Item>, index: Int, title: String) {
+    fun play(items: List<Item>, index: Int, title: String, category: Category? = null) {
         val playable = items.filter { it.url != null }
         val start = playable.indexOf(items.getOrNull(index))
         if (start < 0) return
         current?.onHidden()
-        PlayQueue.set(playable, start, title, playlist.id)
+        PlayQueue.set(playable, start, title, playlist.id, category)
         startActivity(Intent(this, PlayerActivity::class.java))
     }
 
     fun openSeries(series: Item) = push(EpisodesPage(this, series))
+
+    /** The last live channel in its group (or the first channel of the first group), full screen. */
+    private fun startLive() {
+        val pid = playlist.id
+        val src = source
+        scope.launch {
+            try {
+                val last = Store.lastLive(this@MainActivity, pid)
+                val favorites = Category(Category.FAVORITES, getString(R.string.favorites))
+                val cats = src.categories(Section.LIVE)
+                val cat = when {
+                    last?.categoryId == Category.FAVORITES -> favorites
+                    last != null -> cats.firstOrNull { it.id == last.categoryId }
+                    else -> null
+                } ?: cats.firstOrNull { it.id != Category.ALL } ?: return@launch
+                val items = if (cat.id == Category.FAVORITES) {
+                    Store.favorites(this@MainActivity, pid).filter { it.kind == app.iptvplayer.tv.Kind.LIVE }
+                } else {
+                    src.items(Section.LIVE, cat)
+                }
+                if (items.isEmpty()) return@launch
+                val index = items.indexOfFirst { it.kind.name + ":" + it.id == last?.itemKey }.coerceAtLeast(0)
+                play(items, index, cat.name, cat)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // No live channels reachable: stay on Home.
+            }
+        }
+    }
 
     fun toggleFavorite(item: Item): Boolean {
         val added = Store.toggleFavorite(this, playlist.id, item)

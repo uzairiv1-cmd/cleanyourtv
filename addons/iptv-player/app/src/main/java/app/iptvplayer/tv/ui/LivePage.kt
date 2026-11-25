@@ -194,7 +194,7 @@ class LivePage(host: MainActivity) : Page(host, R.layout.page_live) {
     private fun watch(i: Int) {
         if (channels.getOrNull(i) == null) return
         stopPreview()
-        host.play(channels, i, selected?.name?.removePrefix("★")?.trim().orEmpty())
+        host.play(channels, i, selected?.name?.removePrefix("★")?.trim().orEmpty(), selected)
     }
 
     private fun startPreview(item: Item) {

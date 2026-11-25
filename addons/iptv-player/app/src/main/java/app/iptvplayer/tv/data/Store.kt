@@ -90,7 +90,7 @@ object Store {
             val kind = try { Kind.valueOf(o.optString("kind")) } catch (e: IllegalArgumentException) { return@mapNotNull null }
             Item(
                 o.optString("id"), o.optString("title"), o.optString("logo").ifEmpty { null },
-                o.optString("url").ifEmpty { null }, kind, o.optString("info"),
+                o.optString("url").ifEmpty { null }, kind, o.optString("info"), o.optString("epg"),
             )
         }
     }
@@ -113,11 +113,30 @@ object Store {
         list.forEach {
             arr.put(
                 JSONObject().put("id", it.id).put("title", it.title).put("logo", it.logo ?: "")
-                    .put("url", it.url ?: "").put("kind", it.kind.name).put("info", it.info)
+                    .put("url", it.url ?: "").put("kind", it.kind.name).put("info", it.info).put("epg", it.epgId)
             )
         }
         prefs(c).edit().putString(key, arr.toString()).apply()
     }
+
+    // The live channel last watched, with its group, so the app can open straight into it.
+
+    data class LastLive(val categoryId: String, val categoryName: String, val itemKey: String)
+
+    fun setLastLive(c: Context, playlistId: String, categoryId: String, categoryName: String, item: Item) {
+        prefs(c).edit().putString("last_$playlistId", JSONObject().put("cat", categoryId).put("name", categoryName)
+            .put("key", item.kind.name + ":" + item.id).toString()).apply()
+    }
+
+    fun lastLive(c: Context, playlistId: String): LastLive? = try {
+        val o = JSONObject(prefs(c).getString("last_$playlistId", null) ?: return null)
+        LastLive(o.optString("cat"), o.optString("name"), o.optString("key"))
+    } catch (e: Exception) {
+        null
+    }
+
+    fun startInLive(c: Context) = prefs(c).getBoolean("set_start_live", true)
+    fun setStartInLive(c: Context, on: Boolean) = prefs(c).edit().putBoolean("set_start_live", on).apply()
 
     // Settings.
 

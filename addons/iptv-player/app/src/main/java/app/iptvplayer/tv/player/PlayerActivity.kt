@@ -2,18 +2,26 @@ package app.iptvplayer.tv.player
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.pm.PackageManager
+import android.content.res.ColorStateList
+import android.graphics.drawable.Drawable
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.net.ConnectivityManager
-import android.net.Network
+import android.view.GestureDetector
+import android.view.Gravity
 import android.view.KeyEvent
+import android.view.MotionEvent
 import android.view.View
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import android.widget.Toast
 import android.window.OnBackInvokedDispatcher
 import androidx.annotation.OptIn
 import androidx.media3.common.C
@@ -27,58 +35,106 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import app.iptvplayer.tv.Category
 import app.iptvplayer.tv.Item
 import app.iptvplayer.tv.Kind
 import app.iptvplayer.tv.R
+import app.iptvplayer.tv.Section
+import app.iptvplayer.tv.data.Session
 import app.iptvplayer.tv.data.Store
+import app.iptvplayer.tv.source.Epg
+import app.iptvplayer.tv.source.Programme
+import app.iptvplayer.tv.source.Source
 import app.iptvplayer.tv.ui.ImageLoader
 import app.iptvplayer.tv.ui.MonogramDrawable
 import app.iptvplayer.tv.ui.SimpleAdapter
 import app.iptvplayer.tv.ui.clipToBackground
+import app.iptvplayer.tv.ui.dp
 import app.iptvplayer.tv.ui.focusPosition
 import app.iptvplayer.tv.ui.formatClock
 import app.iptvplayer.tv.ui.zoomOnFocus
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import java.util.Date
+import kotlin.math.abs
 
 /**
  * Full-screen player.
- * Live: Up/Down or Channel +/- change channel (with a banner), Right or Menu opens the channel list,
- * Left goes back to the previous channel, number keys jump to a channel, OK shows the controls.
- * Movies and episodes: Left/Right jump 10 seconds, OK shows the controls, and they resume where they stopped.
+ *
+ * Live TV, all panels over the picture: OK opens the channel menu (◀ ▶ switch groups), Up/Down or
+ * Channel +/- change channel with the info bar, Info shows the programme, Left returns to the previous
+ * channel, number keys jump. Colour keys: red favourite, green TV guide, yellow all channels, blue groups.
+ * Menu opens audio, subtitles and picture. On touch screens: tap for the info bar and a toolbar,
+ * swipe up or down to change channel.
+ *
+ * Movies and episodes: OK shows the controls, Left/Right jump 10 s, they resume where they stopped.
  */
 @OptIn(UnstableApi::class)
 class PlayerActivity : Activity() {
+    private enum class Overlay { NONE, MENU, GUIDE, GROUPS }
+
+    private class Panel(val root: View) {
+        val tab: TextView = root.findViewById(R.id.panel_tab)
+        val list: RecyclerView = root.findViewById(R.id.panel_list)
+        val message: TextView = root.findViewById(R.id.panel_message)
+        val legend: LinearLayout = root.findViewById(R.id.panel_legend)
+    }
+
     private var player: ExoPlayer? = null
+    private val scope = MainScope()
+    private val handler = Handler(Looper.getMainLooper())
     private lateinit var view: PlayerView
     private lateinit var controls: View
-    private lateinit var banner: View
-    private lateinit var drawer: View
-    private lateinit var drawerList: RecyclerView
     private lateinit var error: View
     private lateinit var flash: TextView
     private lateinit var buffering: View
     private lateinit var playButton: ImageView
     private lateinit var seek: ProgressBar
-    private val handler = Handler(Looper.getMainLooper())
+    private lateinit var reconnectPill: TextView
+    private lateinit var infoBar: View
+    private lateinit var descPanel: View
+    private lateinit var touchBar: View
+    private lateinit var scrim: View
+    private lateinit var cornerLogo: View
+    private lateinit var clockBadge: TextView
+    private lateinit var menu: Panel
+    private lateinit var guide: Panel
+    private lateinit var groups: Panel
+
+    private var source: Source? = null
+    private var isTouch = false
+    private var overlay = Overlay.NONE
+    private var guideReturnsTo = Overlay.NONE
+    private var categories: List<Category> = emptyList()
+    private var menuCategory: Category? = null
+    private var menuItems: List<Item> = emptyList()
+    private var menuSelected = 0
+    private var guideList: List<Programme> = emptyList()
+    private val epg = HashMap<String, List<Programme>>()
+    private val epgLoading = HashSet<String>()
+    private val timeFormat by lazy { android.text.format.DateFormat.getTimeFormat(this) }
+
     private val hideControls = Runnable { setControls(false) }
-    private val hideBanner = Runnable { banner.visibility = View.GONE }
+    private val hideInfo = Runnable { setInfo(false) }
     private val hideFlash = Runnable { flash.visibility = View.GONE }
     private val tick = object : Runnable {
         override fun run() {
             updateTimes()
-            handler.postDelayed(this, 500)
+            if (infoBar.visibility == View.VISIBLE) PlayQueue.current?.let { bindInfoEpg(it) }
+            handler.postDelayed(this, 1000)
         }
     }
+
+    // Recovery (see Recovery.kt).
     private val detector = StallDetector()
     private var attempts = 0
     private var reconnectPending = false
     private var playingSince = 0L
-    /** The address being played: the channel's own, or its other format after repeated failures. */
     private var currentUrl: String? = null
     private val reconnectNow = Runnable { reopen() }
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
-    private lateinit var reconnectPill: TextView
-
-    /** Once a second: notices a frozen or endlessly buffering stream, and forgets old failures after 30 s of playing. */
     private val watch = object : Runnable {
         override fun run() {
             val p = player
@@ -90,6 +146,7 @@ class PlayerActivity : Activity() {
             handler.postDelayed(this, 1000)
         }
     }
+
     private var resumeUrl: String? = null
     private var lastChannel = -1
     private var typed = ""
@@ -101,19 +158,48 @@ class PlayerActivity : Activity() {
     private var speed = 1f
 
     private val live: Boolean get() = PlayQueue.current?.kind == Kind.LIVE
+    private fun key(i: Item) = i.kind.name + ":" + i.id
+    private fun pid() = PlayQueue.playlistId.ifEmpty { Store.active(this)?.id.orEmpty() }
+    private fun isFav(i: Item) = pid().isNotEmpty() && Store.isFavorite(this, pid(), i)
 
-    private val drawerAdapter: SimpleAdapter<Item> = SimpleAdapter<Item>(R.layout.item_channel) { v, item, i ->
+    // Channel menu rows: number, logo, name, favourite, what's on, minutes left, progress.
+    private val menuAdapter: SimpleAdapter<Item> = SimpleAdapter(R.layout.item_menu_row) { v, item, i ->
         v.findViewById<TextView>(R.id.number).text = (i + 1).toString()
         val img = v.findViewById<ImageView>(R.id.image)
         img.clipToBackground()
-        ImageLoader.load(img, item.logo, MonogramDrawable(item.title), 120)
-        v.findViewById<TextView>(R.id.title).apply {
-            text = item.title
-            setTextColor(if (i == PlayQueue.index) 0xFFFF7A2E.toInt() else 0xFFEEF0F4.toInt())
+        ImageLoader.load(img, item.logo, MonogramDrawable(item.title), 80)
+        v.findViewById<TextView>(R.id.title).text = item.title
+        v.findViewById<View>(R.id.star).visibility = if (isFav(item)) View.VISIBLE else View.GONE
+        v.isActivated = PlayQueue.current?.let { key(it) == key(item) } == true
+        bindRowEpg(v, item)
+        loadEpg(item) { if (menuItems.getOrNull(i)?.let(::key) == key(item)) menuAdapter.notifyItemChanged(i) }
+        v.setOnClickListener { playFromMenu(i) }
+        v.setOnLongClickListener { toggleFavorite(item); menuAdapter.notifyItemChanged(i); true }
+        v.setOnFocusChangeListener { _, has -> if (has) menuSelected = i }
+    }
+
+    private val guideAdapter: SimpleAdapter<Programme> = SimpleAdapter(R.layout.item_simple_row) { v, p, _ ->
+        val on = p.isOn(System.currentTimeMillis())
+        v.findViewById<TextView>(R.id.a).apply {
+            text = "${timeFormat.format(Date(p.start))} – ${timeFormat.format(Date(p.end))}"
+            minWidth = dp(92)
+            setTextColor(if (on) 0xFFFF7A2E.toInt() else 0xFF9AA0AA.toInt())
         }
-        v.findViewById<View>(R.id.star).visibility = View.GONE
-        v.setOnClickListener { setDrawer(false); go(i) }
-        v.zoomOnFocus(1.03f)
+        v.findViewById<TextView>(R.id.b).apply { text = p.title; paint.isFakeBoldText = on }
+        v.findViewById<TextView>(R.id.c).apply {
+            text = if (on) getString(R.string.now_badge) else ""
+            setTextColor(0xFFFF4D4D.toInt())
+        }
+        v.isActivated = on
+        v.setOnClickListener { showDescription(p, PlayQueue.current) }
+    }
+
+    private val groupsAdapter: SimpleAdapter<Category> = SimpleAdapter(R.layout.item_simple_row) { v, c, i ->
+        v.findViewById<TextView>(R.id.a).text = (i + 1).toString()
+        v.findViewById<TextView>(R.id.b).text = c.name
+        v.findViewById<TextView>(R.id.c).text = ""
+        v.isActivated = c.id == (PlayQueue.category?.id ?: "")
+        v.setOnClickListener { openMenu(c) }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -121,29 +207,80 @@ class PlayerActivity : Activity() {
         setContentView(R.layout.activity_player)
         view = findViewById(R.id.player_view)
         controls = findViewById(R.id.controls)
-        banner = findViewById(R.id.banner)
-        drawer = findViewById(R.id.drawer)
-        drawerList = findViewById(R.id.drawer_list)
         error = findViewById(R.id.error)
         flash = findViewById(R.id.flash)
         buffering = findViewById(R.id.buffering)
         playButton = findViewById(R.id.btn_play)
         seek = findViewById(R.id.seek)
         reconnectPill = findViewById(R.id.reconnect)
+        infoBar = findViewById(R.id.info_bar)
+        descPanel = findViewById(R.id.desc_panel)
+        touchBar = findViewById(R.id.touch_bar)
+        scrim = findViewById(R.id.scrim)
+        cornerLogo = findViewById(R.id.corner_logo)
+        clockBadge = findViewById(R.id.clock_badge)
+        menu = Panel(findViewById(R.id.menu_panel))
+        guide = Panel(findViewById(R.id.guide_panel))
+        groups = Panel(findViewById(R.id.groups_panel))
         view.keepScreenOn = true
-        drawerList.layoutManager = LinearLayoutManager(this)
-        drawerList.adapter = drawerAdapter
+        source = Session.source(this)
+        isTouch = packageManager.hasSystemFeature(PackageManager.FEATURE_TOUCHSCREEN) &&
+            !packageManager.hasSystemFeature(PackageManager.FEATURE_LEANBACK)
+
+        for ((panel, adapter) in listOf(menu to menuAdapter, guide to guideAdapter, groups to groupsAdapter)) {
+            panel.list.layoutManager = LinearLayoutManager(this)
+            panel.list.adapter = adapter
+            panel.list.itemAnimator = null
+        }
+        legend(menu, listOf(
+            Triple(0xFFDDDDDD.toInt(), R.string.key_info) { showDescription(null, menuItems.getOrNull(menuSelected)) },
+            Triple(0xFFE53935.toInt(), R.string.key_fav) { menuItems.getOrNull(menuSelected)?.let { toggleFavorite(it); menuAdapter.notifyItemChanged(menuSelected) } },
+            Triple(0xFF43A047.toInt(), R.string.key_guide) { menuItems.getOrNull(menuSelected)?.let { openGuide(it) } },
+            Triple(0xFFFDD835.toInt(), R.string.key_all) { openMenu(allChannels()) },
+            Triple(0xFF1E88E5.toInt(), R.string.key_groups) { openGroups() },
+        ))
+        legend(guide, listOf(Triple(0xFFDDDDDD.toInt(), R.string.key_back) { closeOverlay() }))
+        legend(groups, listOf(
+            Triple(0xFFDDDDDD.toInt(), R.string.key_open) { },
+            Triple(0xFFFDD835.toInt(), R.string.key_all) { openMenu(allChannels()) },
+        ))
 
         playButton.setOnClickListener { togglePlay(); touch() }
-        findViewById<View>(R.id.btn_prev).setOnClickListener { if (live) move(-1) else skip(-10_000); touch() }
-        findViewById<View>(R.id.btn_next).setOnClickListener { if (live) move(1) else skip(10_000); touch() }
-        findViewById<View>(R.id.btn_list).setOnClickListener { setControls(false); setDrawer(true) }
+        findViewById<View>(R.id.btn_prev).setOnClickListener { skip(-10_000); touch() }
+        findViewById<View>(R.id.btn_next).setOnClickListener { skip(10_000); touch() }
         findViewById<View>(R.id.btn_tracks).setOnClickListener { showOptions() }
         findViewById<View>(R.id.error_retry).setOnClickListener { play(PlayQueue.current ?: return@setOnClickListener) }
         findViewById<View>(R.id.error_next).setOnClickListener { move(1) }
-        for (id in intArrayOf(R.id.btn_prev, R.id.btn_play, R.id.btn_next, R.id.btn_list, R.id.btn_tracks, R.id.error_retry, R.id.error_next)) {
+        for (id in intArrayOf(R.id.btn_prev, R.id.btn_play, R.id.btn_next, R.id.btn_tracks, R.id.error_retry, R.id.error_next)) {
             findViewById<View>(id).zoomOnFocus(1.12f)
         }
+        scrim.setOnClickListener { closeOverlay() }
+        findViewById<View>(R.id.t_channels).setOnClickListener { openMenu() }
+        findViewById<View>(R.id.t_groups).setOnClickListener { openGroups() }
+        findViewById<View>(R.id.t_guide).setOnClickListener { PlayQueue.current?.let { openGuide(it) } }
+        findViewById<View>(R.id.t_info).setOnClickListener { toggleDescription() }
+        findViewById<View>(R.id.t_options).setOnClickListener { showOptions() }
+        findViewById<View>(R.id.t_close).setOnClickListener { finish() }
+
+        val gestures = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onDown(e: MotionEvent) = true
+            override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+                when {
+                    overlay != Overlay.NONE -> closeOverlay()
+                    live -> setInfo(infoBar.visibility != View.VISIBLE)
+                    else -> setControls(controls.visibility != View.VISIBLE)
+                }
+                return true
+            }
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
+                val dy = e2.y - (e1?.y ?: e2.y)
+                val dx = e2.x - (e1?.x ?: e2.x)
+                if (!live || overlay != Overlay.NONE || abs(dy) < dp(60) || abs(dy) < abs(dx)) return false
+                move(if (dy < 0) 1 else -1)
+                return true
+            }
+        })
+        view.setOnTouchListener { v, ev -> if (ev.action == MotionEvent.ACTION_UP) v.performClick(); gestures.onTouchEvent(ev) }
 
         if (Build.VERSION.SDK_INT >= 33) {
             onBackInvokedDispatcher.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT) {
@@ -151,6 +288,26 @@ class PlayerActivity : Activity() {
             }
         }
         if (PlayQueue.current == null) finish()
+    }
+
+    private fun legend(panel: Panel, keys: List<Triple<Int, Int, () -> Unit>>) {
+        panel.legend.removeAllViews()
+        for ((color, label, action) in keys) {
+            val t = TextView(this)
+            t.text = getString(label)
+            t.textSize = 9f
+            t.setTextColor(0xFFDDDDDD.toInt())
+            t.gravity = Gravity.CENTER_VERTICAL
+            t.setPadding(dp(6), dp(5), dp(6), dp(5))
+            val dot: Drawable? = getDrawable(R.drawable.key_dot)?.mutate()
+            dot?.setTintList(ColorStateList.valueOf(color))
+            t.setCompoundDrawablesRelativeWithIntrinsicBounds(dot, null, null, null)
+            t.compoundDrawablePadding = dp(4)
+            t.setBackgroundResource(R.drawable.bg_menu_row)
+            t.isFocusable = false
+            t.setOnClickListener { action() }
+            panel.legend.addView(t)
+        }
     }
 
     override fun onStart() {
@@ -165,6 +322,26 @@ class PlayerActivity : Activity() {
         handler.post(tick)
         handler.post(watch)
         watchNetwork()
+    }
+
+    override fun onStop() {
+        savePosition()
+        resumeUrl = null
+        player?.let { it.removeListener(listener); it.release() }
+        player = null
+        view.player = null
+        handler.removeCallbacksAndMessages(null)
+        reconnectPending = false
+        networkCallback?.let { cb ->
+            try { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(cb) } catch (e: RuntimeException) { /* already gone */ }
+        }
+        networkCallback = null
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        scope.cancel()
+        super.onDestroy()
     }
 
     /** When the network comes back after a drop, reconnect at once instead of waiting for the next try. */
@@ -187,21 +364,6 @@ class PlayerActivity : Activity() {
         } catch (e: RuntimeException) {
             // Some TVs limit network callbacks; the timed retries still run.
         }
-    }
-
-    override fun onStop() {
-        savePosition()
-        resumeUrl = null
-        player?.let { it.removeListener(listener); it.release() }
-        player = null
-        view.player = null
-        handler.removeCallbacksAndMessages(null)
-        reconnectPending = false
-        networkCallback?.let { cb ->
-            try { getSystemService(ConnectivityManager::class.java)?.unregisterNetworkCallback(cb) } catch (e: RuntimeException) { /* already gone */ }
-        }
-        networkCallback = null
-        super.onStop()
     }
 
     private val listener = object : Player.Listener {
@@ -295,40 +457,251 @@ class PlayerActivity : Activity() {
         }
         p.prepare()
         p.playWhenReady = true
-        if (PlayQueue.playlistId.isNotEmpty()) Store.addRecent(this, PlayQueue.playlistId, item)
+        val pid = pid()
+        if (pid.isNotEmpty()) {
+            Store.addRecent(this, pid, item)
+            PlayQueue.category?.let { c -> if (item.kind == Kind.LIVE) Store.setLastLive(this, pid, c.id, c.name, item) }
+        }
         updateChrome(item)
-        if (live) showBanner(item)
+        if (item.kind == Kind.LIVE) setInfo(true)
     }
 
     private fun updateChrome(item: Item) {
-        val isLive = item.kind == Kind.LIVE
-        val n = PlayQueue.items.size
-        findViewById<View>(R.id.seek_row).visibility = if (isLive) View.GONE else View.VISIBLE
-        findViewById<View>(R.id.bottom_live).visibility = if (isLive) View.VISIBLE else View.GONE
-        findViewById<TextView>(R.id.position).text = if (isLive && n > 1) "${PlayQueue.index + 1} / $n" else item.title
-        findViewById<TextView>(R.id.hints).setText(if (isLive) R.string.hints_live else R.string.hints_vod)
-        findViewById<View>(R.id.btn_list).visibility = if (isLive && n > 1) View.VISIBLE else View.GONE
-        val showSteps = !isLive || n > 1
-        findViewById<View>(R.id.btn_prev).visibility = if (showSteps) View.VISIBLE else View.INVISIBLE
-        findViewById<View>(R.id.btn_next).visibility = if (showSteps) View.VISIBLE else View.INVISIBLE
-        findViewById<ImageView>(R.id.btn_prev).setImageResource(if (isLive) R.drawable.ic_prev else R.drawable.ic_back10)
-        findViewById<ImageView>(R.id.btn_next).setImageResource(if (isLive) R.drawable.ic_next else R.drawable.ic_fwd10)
-        findViewById<TextView>(R.id.drawer_cap).text = getString(R.string.now_watching, PlayQueue.title.ifEmpty { item.title })
+        findViewById<TextView>(R.id.position).text = item.title
+        findViewById<TextView>(R.id.hints).setText(R.string.hints_vod)
     }
 
-    private fun showBanner(item: Item) {
-        val logo = findViewById<ImageView>(R.id.banner_logo)
+    // Info bar and description.
+
+    private fun setInfo(show: Boolean) {
+        handler.removeCallbacks(hideInfo)
+        if (!show) {
+            infoBar.visibility = View.GONE
+            descPanel.visibility = View.GONE
+            touchBar.visibility = View.GONE
+            clockBadge.visibility = View.GONE
+            if (overlay == Overlay.NONE) cornerLogo.visibility = View.GONE
+            return
+        }
+        val item = PlayQueue.current ?: return
+        findViewById<TextView>(R.id.info_number).text = (PlayQueue.index + 1).toString()
+        val logo = findViewById<ImageView>(R.id.info_logo)
         logo.clipToBackground()
-        ImageLoader.load(logo, item.logo, MonogramDrawable(item.title), 160)
-        findViewById<TextView>(R.id.banner_cap).text = getString(R.string.channel_n, PlayQueue.index + 1)
-        findViewById<TextView>(R.id.banner_title).text = item.title
-        banner.visibility = View.VISIBLE
-        banner.alpha = 0f
-        banner.translationY = -20f
-        banner.animate().alpha(1f).translationY(0f).setDuration(220).start()
-        handler.removeCallbacks(hideBanner)
-        handler.postDelayed(hideBanner, 3500)
+        ImageLoader.load(logo, item.logo, MonogramDrawable(item.title), 120)
+        findViewById<TextView>(R.id.info_name).text = item.title
+        findViewById<View>(R.id.info_star).visibility = if (isFav(item)) View.VISIBLE else View.INVISIBLE
+        bindInfoEpg(item)
+        loadEpg(item) { if (PlayQueue.current?.let(::key) == key(item)) bindInfoEpg(item) }
+        infoBar.visibility = View.VISIBLE
+        clockBadge.visibility = View.VISIBLE
+        cornerLogo.visibility = View.VISIBLE
+        if (isTouch) touchBar.visibility = View.VISIBLE
+        handler.postDelayed(hideInfo, if (isTouch) 7000 else 6000)
     }
+
+    private fun bindInfoEpg(item: Item) {
+        val now = System.currentTimeMillis()
+        val clock = timeFormat.format(Date(now))
+        findViewById<TextView>(R.id.info_clock).text = clock
+        clockBadge.text = clock
+        val (n, x) = Epg.nowNext(epg[key(item)].orEmpty(), now)
+        findViewById<TextView>(R.id.now_time).text = n?.let { timeFormat.format(Date(it.start)) } ?: ""
+        findViewById<TextView>(R.id.now_title).text = n?.title ?: getString(R.string.live_channel)
+        findViewById<TextView>(R.id.now_left).text = n?.let { getString(R.string.minutes_plus, it.minutesLeft(now)) } ?: ""
+        findViewById<TextView>(R.id.next_time).text = x?.let { timeFormat.format(Date(it.start)) } ?: ""
+        findViewById<TextView>(R.id.next_title).text = x?.title ?: ""
+        findViewById<TextView>(R.id.next_left).text = x?.let { getString(R.string.minutes_plus, it.minutes) } ?: ""
+        findViewById<ProgressBar>(R.id.info_progress).progress = ((n?.progress(now) ?: 0f) * 1000).toInt()
+    }
+
+    private fun toggleDescription() {
+        if (descPanel.visibility == View.VISIBLE) { descPanel.visibility = View.GONE; return }
+        val item = PlayQueue.current ?: return
+        setInfo(true)
+        showDescription(null, item)
+    }
+
+    /** The programme's title, times and description; [p] null means "what is on now" on [item]. */
+    private fun showDescription(p: Programme?, item: Item?) {
+        item ?: return
+        val now = System.currentTimeMillis()
+        val prog = p ?: Epg.nowNext(epg[key(item)].orEmpty(), now).first
+        findViewById<TextView>(R.id.desc_title).text = prog?.title ?: item.title
+        findViewById<TextView>(R.id.desc_meta).text = prog?.let {
+            "${item.title}  ·  ${timeFormat.format(Date(it.start))} – ${timeFormat.format(Date(it.end))}"
+        } ?: getString(R.string.no_guide)
+        findViewById<TextView>(R.id.desc_text).text = prog?.description.orEmpty()
+        descPanel.visibility = View.VISIBLE
+        handler.removeCallbacks(hideInfo)
+        handler.postDelayed(hideInfo, 12_000)
+    }
+
+    // TV guide data, cached per channel for this screen.
+
+    private fun loadEpg(item: Item, then: () -> Unit) {
+        val k = key(item)
+        if (item.kind != Kind.LIVE || epg.containsKey(k) || !epgLoading.add(k)) return
+        val src = source ?: return
+        scope.launch {
+            val list = try { src.epg(item) } catch (e: CancellationException) { throw e } catch (e: Exception) { emptyList() }
+            epg[k] = list
+            epgLoading.remove(k)
+            then()
+        }
+    }
+
+    private fun bindRowEpg(v: View, item: Item) {
+        val now = System.currentTimeMillis()
+        val n = Epg.nowNext(epg[key(item)].orEmpty(), now).first
+        v.findViewById<TextView>(R.id.prog).text = n?.title ?: ""
+        v.findViewById<TextView>(R.id.left).text = n?.let { getString(R.string.minutes_plus, it.minutesLeft(now)) } ?: ""
+        v.findViewById<ProgressBar>(R.id.mini).apply {
+            visibility = if (n != null) View.VISIBLE else View.INVISIBLE
+            progress = ((n?.progress(now) ?: 0f) * 1000).toInt()
+        }
+    }
+
+    // Panels: channel menu, TV guide, groups.
+
+    private fun showOverlay(o: Overlay) {
+        overlay = o
+        menu.root.visibility = if (o == Overlay.MENU) View.VISIBLE else View.GONE
+        guide.root.visibility = if (o == Overlay.GUIDE) View.VISIBLE else View.GONE
+        groups.root.visibility = if (o == Overlay.GROUPS) View.VISIBLE else View.GONE
+        scrim.visibility = if (o == Overlay.NONE) View.GONE else View.VISIBLE
+        cornerLogo.visibility = if (o == Overlay.NONE && infoBar.visibility != View.VISIBLE) View.GONE else View.VISIBLE
+        if (o != Overlay.NONE) {
+            handler.removeCallbacks(hideInfo)
+            infoBar.visibility = View.GONE
+            descPanel.visibility = View.GONE
+            touchBar.visibility = View.GONE
+            setControls(false)
+        }
+    }
+
+    private fun closeOverlay() {
+        if (overlay == Overlay.GUIDE && guideReturnsTo == Overlay.MENU) {
+            showOverlay(Overlay.MENU)
+            menu.list.focusPosition(menuSelected)
+            return
+        }
+        showOverlay(Overlay.NONE)
+    }
+
+    private fun favoritesCategory() = Category(Category.FAVORITES, getString(R.string.favorites))
+    private fun allChannels() = Category(Category.ALL, getString(R.string.key_all))
+
+    private fun ensureCategories(then: () -> Unit) {
+        if (categories.isNotEmpty()) { then(); return }
+        val src = source ?: return
+        scope.launch {
+            categories = listOf(favoritesCategory()) + try {
+                src.categories(Section.LIVE)
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { emptyList() }
+            then()
+        }
+    }
+
+    /** Opens the channel menu on [c], or on the list being watched. */
+    private fun openMenu(c: Category? = null) {
+        showOverlay(Overlay.MENU)
+        val current = PlayQueue.category
+        if (c == null || c.id == current?.id) {
+            setMenu(current, PlayQueue.items, PlayQueue.index)
+        } else {
+            loadGroup(c)
+        }
+        ensureCategories { }
+    }
+
+    private fun setMenu(c: Category?, items: List<Item>, focus: Int) {
+        menuCategory = c
+        menuItems = items
+        menu.tab.text = getString(R.string.group_tab, c?.name ?: PlayQueue.title.ifEmpty { getString(R.string.channels) }, items.size)
+        menu.message.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+        menu.message.text = getString(R.string.nothing_here)
+        menuAdapter.submit(items)
+        menuSelected = focus.coerceIn(0, (items.size - 1).coerceAtLeast(0))
+        if (items.isNotEmpty()) menu.list.focusPosition(menuSelected)
+    }
+
+    private fun loadGroup(c: Category) {
+        val src = source ?: return
+        menu.tab.text = c.name
+        menu.message.text = getString(R.string.loading)
+        menu.message.visibility = View.VISIBLE
+        menuAdapter.submit(emptyList())
+        scope.launch {
+            val items = try {
+                if (c.id == Category.FAVORITES) Store.favorites(this@PlayerActivity, pid()).filter { it.kind == Kind.LIVE }
+                else src.items(Section.LIVE, c)
+            } catch (e: CancellationException) { throw e } catch (e: Exception) { emptyList() }
+            if (overlay != Overlay.MENU) return@launch
+            val playing = PlayQueue.current?.let(::key)
+            setMenu(c, items, items.indexOfFirst { key(it) == playing }.coerceAtLeast(0))
+        }
+    }
+
+    /** ◀ ▶ in the channel menu: the previous or next group. */
+    private fun switchGroup(delta: Int) {
+        ensureCategories {
+            if (categories.isEmpty()) return@ensureCategories
+            val i = categories.indexOfFirst { it.id == menuCategory?.id }
+            val next = if (i < 0) (if (delta > 0) 0 else categories.lastIndex) else Math.floorMod(i + delta, categories.size)
+            loadGroup(categories[next])
+        }
+    }
+
+    private fun playFromMenu(i: Int) {
+        if (menuItems.getOrNull(i) == null) return
+        lastChannel = PlayQueue.index
+        PlayQueue.set(menuItems, i, menuCategory?.name ?: PlayQueue.title, pid(), menuCategory)
+        showOverlay(Overlay.NONE)
+        play(PlayQueue.current ?: return)
+    }
+
+    private fun openGuide(item: Item) {
+        guideReturnsTo = overlay
+        showOverlay(Overlay.GUIDE)
+        guide.tab.text = getString(R.string.guide_tab, item.title)
+        guide.message.text = getString(R.string.loading)
+        guide.message.visibility = View.VISIBLE
+        guideAdapter.submit(emptyList())
+        val src = source ?: return
+        scope.launch {
+            val list = epg[key(item)] ?: try { src.epg(item) } catch (e: CancellationException) { throw e } catch (e: Exception) { emptyList() }
+            epg[key(item)] = list
+            if (overlay != Overlay.GUIDE) return@launch
+            guideList = list
+            guideAdapter.submit(list)
+            guide.message.text = getString(R.string.no_guide)
+            guide.message.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
+            val now = System.currentTimeMillis()
+            if (list.isNotEmpty()) guide.list.focusPosition(list.indexOfFirst { it.end > now }.coerceAtLeast(0))
+        }
+    }
+
+    private fun openGroups() {
+        showOverlay(Overlay.GROUPS)
+        groups.tab.text = getString(R.string.groups_tab)
+        groups.message.text = getString(R.string.loading)
+        groups.message.visibility = View.VISIBLE
+        ensureCategories {
+            if (overlay != Overlay.GROUPS) return@ensureCategories
+            groups.message.visibility = if (categories.isEmpty()) View.VISIBLE else View.GONE
+            groupsAdapter.submit(categories)
+            groups.list.focusPosition(categories.indexOfFirst { it.id == (menuCategory ?: PlayQueue.category)?.id }.coerceAtLeast(0))
+        }
+    }
+
+    private fun toggleFavorite(item: Item) {
+        val p = pid().ifEmpty { return }
+        val added = Store.toggleFavorite(this, p, item)
+        Toast.makeText(this, getString(if (added) R.string.fav_added else R.string.fav_removed, item.title), Toast.LENGTH_SHORT).show()
+        if (PlayQueue.current?.let(::key) == key(item)) findViewById<View>(R.id.info_star).visibility = if (added) View.VISIBLE else View.INVISIBLE
+    }
+
+    // Playback controls.
 
     private fun updateTimes() {
         val p = player ?: return
@@ -374,7 +747,7 @@ class PlayerActivity : Activity() {
 
     private fun setControls(show: Boolean) {
         handler.removeCallbacks(hideControls)
-        if (show) {
+        if (show && !live) {
             controls.visibility = View.VISIBLE
             updateTimes()
             playButton.requestFocus()
@@ -390,21 +763,11 @@ class PlayerActivity : Activity() {
         if (controls.visibility == View.VISIBLE) handler.postDelayed(hideControls, 5000)
     }
 
-    private fun setDrawer(show: Boolean) {
-        if (show) {
-            drawerAdapter.submit(PlayQueue.items)
-            drawer.visibility = View.VISIBLE
-            drawer.translationX = 120f
-            drawer.animate().translationX(0f).setDuration(200).start()
-            drawerList.focusPosition(PlayQueue.index)
-        } else {
-            drawer.visibility = View.GONE
-        }
-    }
-
     private fun handleBack(): Boolean = when {
-        drawer.visibility == View.VISIBLE -> { setDrawer(false); true }
+        descPanel.visibility == View.VISIBLE -> { descPanel.visibility = View.GONE; true }
+        overlay != Overlay.NONE -> { closeOverlay(); true }
         controls.visibility == View.VISIBLE -> { setControls(false); true }
+        infoBar.visibility == View.VISIBLE -> { setInfo(false); true }
         else -> false
     }
 
@@ -416,45 +779,57 @@ class PlayerActivity : Activity() {
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (event.action != KeyEvent.ACTION_DOWN) return super.dispatchKeyEvent(event)
         val code = event.keyCode
-        when {
-            code == KeyEvent.KEYCODE_CHANNEL_UP -> { move(1); return true }
-            code == KeyEvent.KEYCODE_CHANNEL_DOWN -> { move(-1); return true }
-            code == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE || code == KeyEvent.KEYCODE_MEDIA_PLAY || code == KeyEvent.KEYCODE_MEDIA_PAUSE -> {
-                togglePlay(); return true
-            }
-            code == KeyEvent.KEYCODE_INFO -> { PlayQueue.current?.let { showBanner(it) }; return true }
-            code in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 && live -> {
-                typed += (code - KeyEvent.KEYCODE_0).toString()
-                flash.text = typed
-                flash.visibility = View.VISIBLE
-                handler.removeCallbacks(hideFlash)
-                handler.postDelayed(hideFlash, 1500)
-                handler.removeCallbacks(jumpTyped)
-                handler.postDelayed(jumpTyped, 1500)
+        val selected = if (overlay == Overlay.MENU) menuItems.getOrNull(menuSelected) else PlayQueue.current
+        when (code) {
+            KeyEvent.KEYCODE_PROG_RED -> { selected?.let { toggleFavorite(it); if (overlay == Overlay.MENU) menuAdapter.notifyItemChanged(menuSelected) }; return true }
+            KeyEvent.KEYCODE_PROG_GREEN -> { selected?.takeIf { it.kind == Kind.LIVE }?.let { openGuide(it) }; return true }
+            KeyEvent.KEYCODE_PROG_YELLOW -> { if (live) openMenu(allChannels()); return true }
+            KeyEvent.KEYCODE_PROG_BLUE -> { if (live) openGroups(); return true }
+            KeyEvent.KEYCODE_CHANNEL_UP -> { if (overlay == Overlay.NONE) move(1); return true }
+            KeyEvent.KEYCODE_CHANNEL_DOWN -> { if (overlay == Overlay.NONE) move(-1); return true }
+            KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE, KeyEvent.KEYCODE_MEDIA_PLAY, KeyEvent.KEYCODE_MEDIA_PAUSE -> { togglePlay(); return true }
+            KeyEvent.KEYCODE_INFO -> {
+                if (overlay == Overlay.MENU) showDescription(null, selected) else if (live) toggleDescription()
                 return true
             }
         }
-        // The list, the controls or the error card have focus: let them handle the keys.
-        if (drawer.visibility == View.VISIBLE || error.visibility == View.VISIBLE) {
-            if (drawer.visibility == View.VISIBLE && code == KeyEvent.KEYCODE_DPAD_LEFT) { setDrawer(false); return true }
-            return super.dispatchKeyEvent(event)
+        if (code in KeyEvent.KEYCODE_0..KeyEvent.KEYCODE_9 && live && overlay == Overlay.NONE) {
+            typed += (code - KeyEvent.KEYCODE_0).toString()
+            flash.text = typed
+            flash.visibility = View.VISIBLE
+            handler.removeCallbacks(hideFlash)
+            handler.postDelayed(hideFlash, 1500)
+            handler.removeCallbacks(jumpTyped)
+            handler.postDelayed(jumpTyped, 1500)
+            return true
         }
-        if (controls.visibility == View.VISIBLE) {
-            touch()
+        if (error.visibility == View.VISIBLE) return super.dispatchKeyEvent(event)
+        when (overlay) {
+            Overlay.MENU -> when (code) {
+                KeyEvent.KEYCODE_DPAD_LEFT -> { switchGroup(-1); return true }
+                KeyEvent.KEYCODE_DPAD_RIGHT -> { switchGroup(1); return true }
+                KeyEvent.KEYCODE_MENU -> { openGroups(); return true }
+            }
+            Overlay.GUIDE, Overlay.GROUPS -> if (code == KeyEvent.KEYCODE_MENU) { closeOverlay(); return true }
+            Overlay.NONE -> Unit
+        }
+        if (overlay != Overlay.NONE) return super.dispatchKeyEvent(event)
+        if (!live) {
+            if (controls.visibility == View.VISIBLE) { touch(); return super.dispatchKeyEvent(event) }
+            when (code) {
+                KeyEvent.KEYCODE_DPAD_RIGHT -> { skip(10_000); return true }
+                KeyEvent.KEYCODE_DPAD_LEFT -> { skip(-10_000); return true }
+                KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { setControls(true); return true }
+                KeyEvent.KEYCODE_MENU -> { showOptions(); return true }
+            }
             return super.dispatchKeyEvent(event)
         }
         when (code) {
-            KeyEvent.KEYCODE_DPAD_UP -> if (live) { move(1); return true }
-            KeyEvent.KEYCODE_DPAD_DOWN -> if (live) { move(-1); return true }
-            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MENU -> {
-                if (live && PlayQueue.items.size > 1) { setDrawer(true); return true }
-                if (!live && code == KeyEvent.KEYCODE_DPAD_RIGHT) { skip(10_000); return true }
-            }
-            KeyEvent.KEYCODE_DPAD_LEFT -> {
-                if (live && lastChannel >= 0) { go(lastChannel); return true }
-                if (!live) { skip(-10_000); return true }
-            }
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> { setControls(true); return true }
+            KeyEvent.KEYCODE_DPAD_UP -> { move(1); return true }
+            KeyEvent.KEYCODE_DPAD_DOWN -> { move(-1); return true }
+            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_DPAD_RIGHT -> { openMenu(); return true }
+            KeyEvent.KEYCODE_DPAD_LEFT -> { if (lastChannel >= 0) go(lastChannel); return true }
+            KeyEvent.KEYCODE_MENU -> { showOptions(); return true }
         }
         return super.dispatchKeyEvent(event)
     }

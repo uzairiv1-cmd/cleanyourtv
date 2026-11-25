@@ -96,7 +96,7 @@ object XtreamParser {
     fun live(json: String, api: XtreamApi, ext: String): List<Item> = objects(json).mapNotNull { o ->
         val id = s(o, "stream_id")
         if (id.isEmpty()) return@mapNotNull null
-        Item(id, s(o, "name").ifBlank { "Channel $id" }, s(o, "stream_icon").ifBlank { null }, api.liveUrl(id, ext), Kind.LIVE)
+        Item(id, s(o, "name").ifBlank { "Channel $id" }, s(o, "stream_icon").ifBlank { null }, api.liveUrl(id, ext), Kind.LIVE, epgId = id)
     }
 
     fun movies(json: String, api: XtreamApi): List<Item> = objects(json).mapNotNull { o ->

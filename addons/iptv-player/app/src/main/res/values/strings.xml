@@ -126,4 +126,26 @@
     <string name="set_pair">Add from phone or computer</string>
     <string name="set_pair_sub">Type your playlist on your phone: scan a QR code on the TV</string>
     <string name="reconnecting">⟳  Reconnecting…  (%1$d)</string>
+    <string name="t_channels">☰  Channels</string>
+    <string name="t_groups">Groups</string>
+    <string name="t_guide">TV guide</string>
+    <string name="t_info">Info</string>
+    <string name="t_options">Options</string>
+    <string name="t_close">✕</string>
+    <string name="key_info">Info</string>
+    <string name="key_fav">Favourite</string>
+    <string name="key_guide">TV guide</string>
+    <string name="key_all">All channels</string>
+    <string name="key_groups">Groups</string>
+    <string name="key_open">OK  Open</string>
+    <string name="key_back">Back</string>
+    <string name="group_tab">≡  %1$s  ·  %2$d channels</string>
+    <string name="guide_tab">★  TV guide  ·  %1$s</string>
+    <string name="groups_tab">≡  Groups</string>
+    <string name="no_guide">No TV guide for this channel</string>
+    <string name="loading">Loading…</string>
+    <string name="now_badge">● NOW</string>
+    <string name="minutes_plus">+%1$d</string>
+    <string name="set_start_live">Open in live TV</string>
+    <string name="set_start_live_sub">Start with the last channel, full screen</string>
 </resources>
