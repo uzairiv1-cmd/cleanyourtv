@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">IPTV Player</string>
+    <string name="app_name">AV Player</string>
     <string name="tab_live">Live TV</string>
     <string name="tab_movies">Movies</string>
     <string name="tab_series">Series</string>
@@ -21,7 +21,7 @@
     <string name="delete">Delete</string>
     <string name="delete_confirm">Delete %1$s from this TV?</string>
     <string name="welcome">Welcome. Add your IPTV playlist</string>
-    <string name="no_content_notice">IPTV Player comes with no channels or content. It plays only the playlists you add from your own provider.</string>
+    <string name="no_content_notice">AV Player comes with no channels or content. It plays only the playlists you add from your own provider.</string>
     <string name="new_playlist">Add a playlist</string>
     <string name="edit_playlist">Edit playlist</string>
     <string name="label_name">Name (optional)</string>
@@ -93,7 +93,7 @@
     <string name="on">On</string>
     <string name="off">Off</string>
     <string name="cleared">Watch history cleared</string>
-    <string name="about">Version %1$s. IPTV Player comes with no channels or content: it plays only the playlists you add. Logins stay on this TV.</string>
+    <string name="about">Version %1$s. AV Player comes with no channels or content: it plays only the playlists you add. Logins stay on this TV.</string>
     <string name="options">Audio, subtitles and picture</string>
     <string name="channels">Channels</string>
     <string name="previous">Previous</string>

@@ -1,11 +1,11 @@
-# IPTV Player
+# AV Player
 
-An IPTV player for Android TV, Google TV and Fire TV that opens an **Xtream Codes** account or an
+AV Player is an IPTV player for Android TV, Google TV and Fire TV that opens an **Xtream Codes** account or an
 **M3U / M3U8 link**. It is built for the remote and drawn in black and orange with the AV mark: a side menu
 (Home, Live TV, Movies, Series, Search, Settings), large focus highlights, and a Media3 player.
 
 It is a CleanYourTV add-on: a normal app that works with any launcher. It also has a module card, so on
-CleanYourTV it can sit in the dock as **IPTV Player · Xtream and M3U** once you approve it.
+CleanYourTV it can sit in the dock as **AV Player · Xtream and M3U** once you approve it.
 
 It is free and MIT-licensed, with no ads, no accounts, no tracking and no background services. It comes
 with no channels and only plays the playlists you add. Use only services you are allowed to watch.

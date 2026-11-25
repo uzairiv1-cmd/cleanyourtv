@@ -12,7 +12,7 @@ import javax.net.ssl.SSLException
 
 /** Plain HttpURLConnection for a few GETs. Follows redirects between http and https, which Java does not by itself. */
 object Http {
-    const val USER_AGENT = "IPTVPlayer/1.0 (Linux; Android TV)"
+    const val USER_AGENT = "AVPlayer/1.2 (Linux; Android TV)"
 
     class HttpError(message: String) : IOException(message)
 
